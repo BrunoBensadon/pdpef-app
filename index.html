@@ -1,0 +1,683 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDPEF</title>
+<style>
+  :root { --line:#d7d7dc; --ink:#1c1c22; --dim:#71717a; --accent:#0a7d4f; --accent-bg:#e7f5ee;
+          --warn:#b45309; --card:#fff; --bg:#f4f4f6; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+  #app { padding-bottom: 4.5rem; }
+  header.bar { position: sticky; top:0; z-index:5; background:var(--card);
+    border-bottom:1px solid var(--line); padding:.6rem .8rem; display:flex;
+    justify-content:space-between; align-items:center; gap:.5rem; }
+  header.bar h1 { font-size:1rem; margin:0; }
+  header.bar .who { font-size:.8rem; color:var(--dim); }
+  nav.tabs { position:fixed; bottom:0; left:0; right:0; display:flex; z-index:5;
+    background:var(--card); border-top:1px solid var(--line); }
+  nav.tabs a { flex:1; text-align:center; padding:.7rem .2rem; font-size:.85rem;
+    color:var(--dim); text-decoration:none; }
+  nav.tabs a.on { color:var(--accent); font-weight:600; }
+  main { padding:.8rem; }
+  .gridwrap { overflow-x:auto; background:var(--card); border:1px solid var(--line);
+    border-radius:8px; }
+  table.grid { border-collapse:collapse; font-size:.78rem; }
+  table.grid th, table.grid td { border:1px solid var(--line); padding:.25rem .35rem;
+    text-align:center; min-width:2.1rem; }
+  table.grid th.kid { position:sticky; left:0; background:var(--card); text-align:left;
+    max-width:8.5rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; z-index:2; }
+  table.grid tr.deleg td { background:#ececf1; font-weight:600; text-align:left; }
+  td.cell { cursor:pointer; }
+  td.cell.some { background:var(--accent-bg); color:var(--accent); font-weight:600; }
+  td.cell:active { outline:2px solid var(--accent); }
+  .pill { display:inline-block; border:1px solid var(--line); border-radius:999px;
+    padding:.1rem .55rem; margin:.12rem; font-size:.8rem; background:var(--card); }
+  .btn { display:inline-block; border:1px solid var(--accent); color:var(--accent);
+    background:var(--card); border-radius:8px; padding:.5rem .9rem; font-size:.9rem; cursor:pointer; }
+  .btn.primary { background:var(--accent); color:#fff; }
+  .btn.danger { border-color:#b91c1c; color:#b91c1c; }
+  .picker-list button, .userlist button { display:block; width:100%; text-align:left;
+    background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:.6rem .8rem; margin:.35rem 0; font-size:.95rem; cursor:pointer; }
+  .sheet { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:10;
+    display:flex; align-items:flex-end; }
+  .sheet .panel { background:var(--card); width:100%; max-height:85vh; overflow-y:auto;
+    border-radius:14px 14px 0 0; padding:1rem; }
+  .queuebadge { position:fixed; bottom:3.4rem; right:.8rem; background:var(--warn);
+    color:#fff; border-radius:999px; padding:.25rem .7rem; font-size:.8rem; z-index:6; }
+  .goalhead { font-size:.85rem; color:var(--dim); margin:.2rem 0 .6rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:.7rem; margin:.6rem 0; }
+  .muted { color:var(--dim); font-size:.8rem; }
+  input[type=text], input[type=search] { width:100%; padding:.55rem; font-size:1rem;
+    border:1px solid var(--line); border-radius:8px; }
+  @media print {
+    nav.tabs, header.bar, .queuebadge, .noprint { display:none !important; }
+    body { background:#fff; } #app { padding:0; }
+    .printkid { page-break-after: always; }
+  }
+</style>
+<div id="app">Loading…</div>
+<script type="module">
+"use strict";
+// Pure shared logic for the PDPEF app. No DOM, no network, no globals mutated.
+const AREAS = {
+  "1": "To become more aware of ourselves, other people and cultures, and the wider world.",
+  "2": "To be willing to be a responsible and active member of our communities.",
+  "3": "To be able to take action for positive social change within our communities.",
+  "4": "To understand peace, non-violent action, and social justice.",
+};
+const GOAL_TEXTS = {
+  "1a": "Aware of and care for oneself",
+  "1b": "Willing to have positive attitudes towards others",
+  "1c": "Able to respect oneself, others, and our differences",
+  "1d": "Understand theme and how it relates to oneself and others",
+  "2a": "Aware of one's own responsibilities",
+  "2b": "Willing to actively participate in the community",
+  "2c": "Able to cooperate and build trust with others",
+  "2d": "Understands how to contribute to a peaceful and inclusive community",
+  "3a": "Aware of emotions in oneself and others and their impact",
+  "3b": "Willing to listen and communicate respectfully with others",
+  "3c": "Able to analyse and solve problems creatively",
+  "3d": "Understands how to resolve conflict peacefully with others",
+  "4a": "Aware of the theme and its connection to peace and social justice",
+  "4b": "Willing to learn new ideas, concepts, and worldviews",
+  "4c": "Able to be open minded and think critically about new ideas",
+  "4d": "Understand the theme on a local, national, and global level",
+};
+const GOALS = Object.keys(GOAL_TEXTS).map(code => ({ code, area: code[0], text: GOAL_TEXTS[code] }));
+
+function normText(s) {
+  return String(s == null ? "" : s).normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
+function buildGrid(roster, entries) {
+  const grid = {};
+  roster.forEach(k => { grid[k.kid_id] = {}; });
+  entries.forEach(e => {
+    if (e.removed_at) return;
+    const row = grid[e.kid_id];
+    if (!row) return;
+    (row[e.goal] = row[e.goal] || []).push(e);
+  });
+  return grid;
+}
+
+function usageCounts(entries) {
+  const c = {};
+  entries.forEach(e => { if (!e.removed_at) c[e.ev_id] = (c[e.ev_id] || 0) + 1; });
+  return c;
+}
+
+function searchLibrary(library, goal, query, kidId, counts) {
+  const toks = normText(query).toLowerCase().split(" ").filter(Boolean);
+  return library
+    .filter(ev => ev.goal === goal && ev.status === "active"
+      && (!ev.kid_only || ev.kid_only === kidId)
+      && toks.every(t => ev.text.toLowerCase().indexOf(t) >= 0))
+    .sort((a, b) => (counts[b.ev_id] || 0) - (counts[a.ev_id] || 0)
+      || a.text.localeCompare(b.text));
+}
+
+function findExact(library, goal, text) {
+  const n = normText(text).toLowerCase();
+  return library.find(ev => ev.goal === goal && ev.status === "active"
+    && !ev.kid_only && normText(ev.text).toLowerCase() === n) || null;
+}
+
+function applyOps(data, ops) {
+  let library = data.library.slice();
+  let entries = data.entries.slice();
+  ops.forEach(op => {
+    const p = op.payload;
+    if (op.method === "addEvidence" && !library.some(e => e.ev_id === p.id)) {
+      library.push({ ev_id: p.id, goal: p.goal, text: normText(p.text), added_by: p.author,
+        added_at: op.at, status: "active", kid_only: p.kidOnly || "" });
+    } else if (op.method === "addEntry"
+      && !entries.some(e => e.entry_id === p.id)
+      && !entries.some(e => e.kid_id === p.kidId && e.goal === p.goal
+        && e.ev_id === p.evId && !e.removed_at)) {
+      entries.push({ entry_id: p.id, kid_id: p.kidId, goal: p.goal, ev_id: p.evId,
+        added_by: p.author, added_at: op.at, removed_by: "", removed_at: "" });
+    } else if (op.method === "removeEntry") {
+      entries = entries.map(e => e.entry_id === p.entryId
+        ? Object.assign({}, e, { removed_by: p.author, removed_at: op.at }) : e);
+    } else if (op.method === "hideEvidence") {
+      library = library.map(e => e.ev_id === p.evId
+        ? Object.assign({}, e, { status: "hidden" }) : e);
+    }
+  });
+  return { library, entries };
+}
+
+const PDPEF = { GOALS, AREAS, normText, buildGrid, usageCounts, searchLibrary, findExact, applyOps };
+if (typeof window !== "undefined") window.PDPEF = PDPEF;
+export { GOALS, AREAS, normText, buildGrid, usageCounts, searchLibrary, findExact, applyOps };
+
+</script>
+<script>
+  "use strict";
+  var state = {
+    user: JSON.parse(localStorage.getItem("pdpef-user") || "null"),
+    data: null,          // {users, roster, library, entries} from the server
+    queue: JSON.parse(localStorage.getItem("pdpef-queue") || "[]"),
+    goalCountry: null,   // delegation selected in the goal view
+  };
+
+  var EXEC_URL = localStorage.getItem("pdpef-exec-url") || "";
+
+  function rpc(method, arg) {
+    if (typeof google !== "undefined" && google.script) { // served by GAS, or local mock
+      return new Promise(function (resolve, reject) {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[method](arg);
+      });
+    }
+    // Static hosting: cookie-less cross-origin POST. No Google session is sent,
+    // which sidesteps the script.google.com session-routing bug on phones.
+    // text/plain avoids a CORS preflight; errors come back in-band as {ok:false}.
+    return fetch(EXEC_URL, {
+      method: "POST",
+      credentials: "omit",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ method: method, payload: arg || null }),
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (res) {
+      if (!res.ok) throw new Error(res.error);
+      return res.result;
+    });
+  }
+
+  function validExecUrl(u) {
+    if (!/\/exec(\?|$)/.test(u) && !/^https?:\/\/(127\.|localhost|192\.168\.)/.test(u)) return false;
+    return /^https:\/\/script\.google\.com\//.test(u) ||
+      /^https?:\/\/(127\.|localhost|192\.168\.)/.test(u); // dev hosts allowed for testing
+  }
+
+  function showSetup(msg) {
+    document.getElementById("app").innerHTML =
+      '<main><h2>Connect to your camp</h2>' +
+      (msg ? '<p class="muted">' + esc(msg) + "</p>" : "") +
+      '<p class="muted">Paste the camp code from the leaders’ group message (it’s a long link starting with https://script.google.com/…). You only do this once.</p>' +
+      '<input type="text" id="codeInput" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">' +
+      '<p><button class="btn primary" id="codeSave">Connect</button></p></main>';
+    document.getElementById("codeSave").onclick = function () {
+      var u = document.getElementById("codeInput").value.trim();
+      if (!validExecUrl(u)) { showSetup("That doesn’t look like a camp code — it should end in /exec."); return; }
+      EXEC_URL = u;
+      localStorage.setItem("pdpef-exec-url", u);
+      document.getElementById("app").textContent = "Connecting…";
+      boot();
+    };
+  }
+
+  function boot() {
+    rpc("api_getAll").then(function (data) {
+      state.data = data;
+      render();
+      flushQueue(); // drain ops queued while offline last session
+    }).catch(function (err) {
+      var usingFetch = !(typeof google !== "undefined" && google.script);
+      document.getElementById("app").innerHTML = "Could not load: " + esc(err.message) +
+        ' <a href="#" id="retry">Retry</a>' +
+        (usingFetch ? ' · <a href="#" id="resetCode">Enter a different camp code</a>' : "");
+      document.getElementById("retry").onclick = function (e) {
+        e.preventDefault();
+        document.getElementById("app").textContent = "Connecting…";
+        boot();
+      };
+      var rc = document.getElementById("resetCode");
+      if (rc) rc.onclick = function (e) {
+        e.preventDefault();
+        localStorage.removeItem("pdpef-exec-url");
+        EXEC_URL = "";
+        showSetup();
+      };
+    });
+  }
+
+  function saveQueue() { localStorage.setItem("pdpef-queue", JSON.stringify(state.queue)); }
+
+  function enqueue(method, payload) {
+    state.queue.push({ method: method, at: new Date().toISOString(), payload: payload });
+    saveQueue();
+    render();
+    flushQueue();
+  }
+
+  var flushing = false;
+  function flushQueue() {
+    if (flushing || !state.queue.length) return;
+    flushing = true;
+    var op = state.queue[0];
+    rpc("api_" + op.method, op.payload).then(function (result) {
+      // Server may have deduped a new evidence statement to an existing one:
+      // rewrite any queued entries that reference our temporary id.
+      if (op.method === "addEvidence" && result && result.ev_id !== op.payload.id) {
+        state.queue.forEach(function (q) {
+          if (q.payload.evId === op.payload.id) q.payload.evId = result.ev_id;
+        });
+      }
+      mergeResult(op, result);
+      state.queue.shift();
+      saveQueue();
+      flushing = false;
+      render();
+      flushQueue();
+    }).catch(function (err) {
+      flushing = false;
+      if (/Only staff/.test(String(err && err.message))) { // permanent: drop, tell user
+        state.queue.shift();
+        saveQueue();
+        alert("Not allowed: " + err.message);
+        render();
+      } else { // transient (offline, lock timeout): keep op, retry soon
+        setTimeout(flushQueue, 5000);
+      }
+    });
+  }
+
+  function mergeResult(op, result) {
+    if (!result) return;
+    if (op.method === "addEvidence" &&
+        !state.data.library.some(function (e) { return e.ev_id === result.ev_id; })) {
+      state.data.library.push(result);
+    } else if (op.method === "addEntry" &&
+        !state.data.entries.some(function (e) { return e.entry_id === result.entry_id; })) {
+      state.data.entries.push(result);
+    } else if (op.method === "removeEntry") {
+      state.data.entries = state.data.entries.filter(function (e) {
+        return e.entry_id !== op.payload.entryId;
+      });
+    } else if (op.method === "hideEvidence") {
+      state.data.library.forEach(function (e) {
+        if (e.ev_id === op.payload.evId) e.status = "hidden";
+      });
+    }
+  }
+
+  function refresh() { // pull latest state (other leaders' work) without losing the queue
+    rpc("api_getAll").then(function (data) { state.data = data; render(); flushQueue(); });
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && state.data) refresh();
+  });
+  setInterval(function () { if (!document.hidden && state.data) refresh(); }, 60000);
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function view() { // server data + optimistic queue
+    return PDPEF.applyOps(state.data, state.queue);
+  }
+
+  function isStaff() {
+    return !!state.user && state.data.users.some(function (u) {
+      return u.name === state.user && u.role === "staff";
+    });
+  }
+
+  function myDelegation() {
+    var u = state.data.users.filter(function (u) { return u.name === state.user; })[0];
+    return (u && u.delegation) || state.data.roster[0].country;
+  }
+
+  function render() {
+    if (!state.data) return;
+    if (!state.user) return pickUser();
+    var h = location.hash || "#grid";
+    var m;
+    if ((m = h.match(/^#goal\/(\w\w)$/))) return renderGoal(m[1]);
+    if ((m = h.match(/^#kid\/(\w+)$/))) return renderKid(m[1]);
+    if ((m = h.match(/^#print\/(\w+)$/))) return renderPrint(m[1]);
+    renderGrid();
+  }
+
+  function pickUser() {
+    var html = '<main><h2>Who are you?</h2><div class="userlist">' +
+      state.data.users.map(function (u) {
+        return '<button data-name="' + esc(u.name) + '">' + esc(u.name) +
+          ' <span class="muted">' + esc(u.role === "staff" ? "staff" : u.delegation) +
+          "</span></button>";
+      }).join("") + "</div></main>";
+    document.getElementById("app").innerHTML = html;
+    document.querySelectorAll(".userlist button").forEach(function (b) {
+      b.onclick = function () {
+        state.user = b.dataset.name;
+        localStorage.setItem("pdpef-user", JSON.stringify(state.user));
+        render();
+      };
+    });
+  }
+
+  function renderShell(active, content) {
+    var tabs = [["#grid", "Grid"], ["#goal/1a", "By goal"],
+                ["#kid/" + state.data.roster[0].kid_id, "By kid"], ["#print/all", "Print"]];
+    document.getElementById("app").innerHTML =
+      '<header class="bar"><h1>PDPEF</h1><span class="who">' + esc(state.user) +
+      ' · <a href="#" id="switchUser">switch</a></span></header>' +
+      "<main>" + content + "</main>" +
+      '<nav class="tabs">' + tabs.map(function (t) {
+        return '<a href="' + t[0] + '" class="' + (t[1] === active ? "on" : "") + '">' + t[1] + "</a>";
+      }).join("") + "</nav>" +
+      (state.queue.length ? '<div class="queuebadge">' + state.queue.length + " saving…</div>" : "");
+    document.getElementById("switchUser").onclick = function (e) {
+      e.preventDefault();
+      state.user = null;
+      localStorage.removeItem("pdpef-user");
+      render();
+    };
+  }
+
+  function renderGrid() {
+    var v = view();
+    var grid = PDPEF.buildGrid(state.data.roster, v.entries);
+    var byCountry = {};
+    state.data.roster.forEach(function (k) {
+      (byCountry[k.country] = byCountry[k.country] || []).push(k);
+    });
+    var head = "<tr><th class='kid'>Participant</th>" + PDPEF.GOALS.map(function (g) {
+      return '<th><a href="#goal/' + g.code + '">' + g.code + "</a></th>";
+    }).join("") + "</tr>";
+    var body = Object.keys(byCountry).map(function (c) {
+      return '<tr class="deleg"><td colspan="17">' + esc(c) + "</td></tr>" +
+        byCountry[c].map(function (k) {
+          return '<tr><th class="kid"><a href="#kid/' + k.kid_id + '">' + esc(k.name) + "</a></th>" +
+            PDPEF.GOALS.map(function (g) {
+              var n = (grid[k.kid_id][g.code] || []).length;
+              return '<td class="cell ' + (n ? "some" : "") + '" data-kid="' + k.kid_id +
+                '" data-goal="' + g.code + '">' + (n || "") + "</td>";
+            }).join("") + "</tr>";
+        }).join("");
+    }).join("");
+    renderShell("Grid", '<div class="gridwrap"><table class="grid">' + head + body +
+      "</table></div><p class='muted'>Tap a cell to add evidence. Tap a goal code or a name for the focused views.</p>");
+    document.querySelectorAll("td.cell").forEach(function (td) {
+      td.onclick = function () { openEditor(td.dataset.kid, td.dataset.goal); };
+    });
+  }
+
+  function closeSheet() {
+    var el = document.getElementById("sheet");
+    if (el) el.remove();
+  }
+
+  function kidById(id) {
+    return state.data.roster.filter(function (k) { return k.kid_id === id; })[0];
+  }
+
+  function goalByCode(code) {
+    return PDPEF.GOALS.filter(function (g) { return g.code === code; })[0];
+  }
+
+  function openEditor(kidId, goalCode, onDone) {
+    var kid = kidById(kidId), goal = goalByCode(goalCode);
+    var el = document.createElement("div");
+    el.className = "sheet"; el.id = "sheet";
+    // Attach to <body>, NOT #app: enqueue() re-renders #app (optimistic update),
+    // which would destroy an open sheet mid-edit.
+    document.body.appendChild(el);
+
+    function draw(query) {
+      var v = view();
+      var evText = {};
+      v.library.forEach(function (e) { evText[e.ev_id] = e; });
+      var current = (PDPEF.buildGrid(state.data.roster, v.entries)[kidId] || {})[goalCode] || [];
+      var counts = PDPEF.usageCounts(v.entries);
+      var results = PDPEF.searchLibrary(v.library, goalCode, query, kidId, counts)
+        .filter(function (ev) {
+          return !current.some(function (en) { return en.ev_id === ev.ev_id; });
+        }).slice(0, 12);
+      var exact = PDPEF.findExact(v.library, goalCode, query);
+      el.innerHTML = '<div class="panel">' +
+        "<h3>" + esc(kid.name) + " (" + esc(kid.country) + ") — " + goalCode + ")</h3>" +
+        '<p class="goalhead">' + esc(goal.text) + "</p>" +
+        "<div>" + (current.length ? current.map(function (en) {
+          var ev = evText[en.ev_id] || { text: en.ev_id };
+          return '<span class="pill">' + esc(ev.text) +
+            (ev.kid_only ? ' <span class="muted">(note)</span>' : "") +
+            (isStaff() ? ' <a href="#" class="rm" data-entry="' + en.entry_id + '">✕</a>' : "") +
+            "</span>";
+        }).join("") : '<span class="muted">No evidence yet.</span>') + "</div><hr>" +
+        '<input type="search" id="q" placeholder="Search evidence or type new…" value="' +
+          esc(query) + '" autocomplete="off">' +
+        '<div class="picker-list" id="results">' + results.map(function (ev) {
+          return '<button data-ev="' + ev.ev_id + '">' + esc(ev.text) +
+            (ev.kid_only ? ' <span class="muted">(note)</span>' : "") +
+            ' <span class="muted">×' + (counts[ev.ev_id] || 0) + "</span></button>";
+        }).join("") + "</div>" +
+        (PDPEF.normText(query) && !exact
+          ? '<button class="btn primary" id="addShared">Add as shared evidence</button> ' +
+            '<button class="btn" id="addNote">Add as note for ' + esc(kid.name) + " only</button>"
+          : "") +
+        '<p style="text-align:right"><button class="btn" id="done">Done</button></p></div>';
+
+      el.querySelector("#done").onclick = function () { closeSheet(); if (onDone) onDone(); render(); };
+      el.onclick = function (e) { if (e.target === el) { closeSheet(); render(); } };
+      var q = el.querySelector("#q");
+      q.oninput = function () { draw(q.value); };
+      // keep focus & caret at end after redraw
+      q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+      el.querySelectorAll("#results button").forEach(function (b) {
+        b.onclick = function () {
+          enqueue("addEntry", { id: crypto.randomUUID(), kidId: kidId, goal: goalCode,
+            evId: b.dataset.ev, author: state.user });
+          draw("");
+        };
+      });
+      el.querySelectorAll("a.rm").forEach(function (a) {
+        a.onclick = function (e) {
+          e.preventDefault();
+          if (confirm("Remove this evidence from " + kid.name + "?")) {
+            enqueue("removeEntry", { entryId: a.dataset.entry, author: state.user });
+            draw(query);
+          }
+        };
+      });
+      function addNew(kidOnly) {
+        var evId = crypto.randomUUID();
+        enqueue("addEvidence", { id: evId, goal: goalCode, text: q.value,
+          author: state.user, kidOnly: kidOnly ? kidId : "" });
+        enqueue("addEntry", { id: crypto.randomUUID(), kidId: kidId, goal: goalCode,
+          evId: evId, author: state.user });
+        draw("");
+      }
+      var s = el.querySelector("#addShared"), n = el.querySelector("#addNote");
+      if (s) s.onclick = function () { addNew(false); };
+      if (n) n.onclick = function () { addNew(true); };
+    }
+    draw("");
+  }
+  function renderGoal(code) {
+    var goal = goalByCode(code);
+    if (!goal) { location.hash = "#grid"; return; }
+    var v = view();
+    var grid = PDPEF.buildGrid(state.data.roster, v.entries);
+    var evText = {};
+    v.library.forEach(function (e) { evText[e.ev_id] = e; });
+    var country = state.goalCountry || myDelegation();
+    var kids = state.data.roster.filter(function (k) { return k.country === country; });
+    var countries = [];
+    state.data.roster.forEach(function (k) {
+      if (countries.indexOf(k.country) < 0) countries.push(k.country);
+    });
+    var gi = PDPEF.GOALS.indexOf(goal);
+    var prev = PDPEF.GOALS[(gi + 15) % 16].code, next = PDPEF.GOALS[(gi + 1) % 16].code;
+    renderShell("By goal",
+      '<div class="card"><a href="#goal/' + prev + '">←</a> <b>' + code + ") " +
+      esc(goal.text) + '</b> <a href="#goal/' + next + '">→</a>' +
+      '<p class="goalhead">' + esc(PDPEF.AREAS[goal.area]) + "</p>" +
+      '<select id="deleg">' + countries.map(function (c) {
+        return '<option ' + (c === country ? "selected" : "") + ">" + esc(c) + "</option>";
+      }).join("") + "</select> " +
+      '<button class="btn" id="multi">Add to several kids…</button></div>' +
+      kids.map(function (k) {
+        var cell = grid[k.kid_id][code] || [];
+        return '<div class="card"><b><a href="#kid/' + k.kid_id + '">' + esc(k.name) +
+          "</a></b><br>" + (cell.length ? cell.map(function (en) {
+            var ev = evText[en.ev_id] || { text: en.ev_id };
+            return '<span class="pill">' + esc(ev.text) + "</span>";
+          }).join("") : '<span class="muted">No evidence yet.</span>') +
+          '<br><button class="btn" data-kid="' + k.kid_id + '">+ Add</button></div>';
+      }).join(""));
+    document.getElementById("deleg").onchange = function (e) {
+      state.goalCountry = e.target.value;
+      renderGoal(code);
+    };
+    document.getElementById("multi").onclick = function () {
+      openMultiAdd(code, kids.map(function (k) { return k.kid_id; }));
+    };
+    document.querySelectorAll(".card .btn[data-kid]").forEach(function (b) {
+      b.onclick = function () { openEditor(b.dataset.kid, code, function () { renderGoal(code); }); };
+    });
+  }
+
+  function openMultiAdd(goalCode, kidIds) {
+    // Pick ONE evidence statement, then tick which of these kids it applies to.
+    var goal = goalByCode(goalCode);
+    var el = document.createElement("div");
+    el.className = "sheet"; el.id = "sheet";
+    document.body.appendChild(el); // body, not #app — see openEditor
+    var chosenEv = null; // {ev_id: existing id or null, text: statement text}
+    function draw(query) {
+      var v = view();
+      var counts = PDPEF.usageCounts(v.entries);
+      var results = PDPEF.searchLibrary(v.library, goalCode, query, "", counts).slice(0, 12);
+      var exact = PDPEF.findExact(v.library, goalCode, query);
+      el.innerHTML = '<div class="panel"><h3>Add to several kids — ' + goalCode + ")</h3>" +
+        '<p class="goalhead">' + esc(goal.text) + "</p>" +
+        (chosenEv
+          ? "<p><b>" + esc(chosenEv.text) + "</b></p><div id='kidticks'>" +
+            kidIds.map(function (id) {
+              var k = kidById(id);
+              return '<label class="pill"><input type="checkbox" checked value="' + id + '"> ' +
+                esc(k.name) + "</label>";
+            }).join("") + "</div>" +
+            '<p><button class="btn primary" id="apply">Apply</button> ' +
+            '<button class="btn" id="back">Change evidence</button></p>'
+          : '<input type="search" id="q" placeholder="Search evidence or type new…" value="' +
+            esc(query) + '" autocomplete="off">' +
+            '<div class="picker-list" id="results">' + results.map(function (ev) {
+              return '<button data-ev="' + ev.ev_id + '" data-text="' + esc(ev.text) + '">' +
+                esc(ev.text) + ' <span class="muted">×' + (counts[ev.ev_id] || 0) +
+                "</span></button>";
+            }).join("") + "</div>" +
+            (PDPEF.normText(query) && !exact
+              ? '<button class="btn primary" id="newShared">Use as new shared evidence</button>'
+              : "")) +
+        '<p style="text-align:right"><button class="btn" id="cancel">Close</button></p></div>';
+      el.querySelector("#cancel").onclick = function () { closeSheet(); render(); };
+      if (chosenEv) {
+        el.querySelector("#back").onclick = function () { chosenEv = null; draw(""); };
+        el.querySelector("#apply").onclick = function () {
+          var evId = chosenEv.ev_id;
+          if (!evId) { // brand-new statement: create once, then link
+            evId = crypto.randomUUID();
+            enqueue("addEvidence", { id: evId, goal: goalCode, text: chosenEv.text,
+              author: state.user, kidOnly: "" });
+          }
+          el.querySelectorAll("#kidticks input:checked").forEach(function (cb) {
+            enqueue("addEntry", { id: crypto.randomUUID(), kidId: cb.value, goal: goalCode,
+              evId: evId, author: state.user });
+          });
+          closeSheet();
+          render();
+        };
+      } else {
+        var q = el.querySelector("#q");
+        q.oninput = function () { draw(q.value); };
+        q.focus(); q.setSelectionRange(q.value.length, q.value.length);
+        el.querySelectorAll("#results button").forEach(function (b) {
+          b.onclick = function () { chosenEv = { ev_id: b.dataset.ev, text: b.dataset.text }; draw(""); };
+        });
+        var ns = el.querySelector("#newShared");
+        if (ns) ns.onclick = function () { chosenEv = { ev_id: null, text: PDPEF.normText(q.value) }; draw(""); };
+      }
+    }
+    draw("");
+  }
+
+  function renderKid(kidId) {
+    var kid = kidById(kidId);
+    if (!kid) { location.hash = "#grid"; return; }
+    var v = view();
+    var grid = PDPEF.buildGrid(state.data.roster, v.entries);
+    var evText = {};
+    v.library.forEach(function (e) { evText[e.ev_id] = e; });
+    var ids = state.data.roster.map(function (k) { return k.kid_id; });
+    var i = ids.indexOf(kidId);
+    var prev = ids[(i + ids.length - 1) % ids.length], next = ids[(i + 1) % ids.length];
+    renderShell("By kid",
+      '<div class="card"><a href="#kid/' + prev + '">←</a> <b>' + esc(kid.name) + " (" +
+      esc(kid.country) + ')</b> <a href="#kid/' + next + '">→</a> ' +
+      '<a class="btn" style="float:right" href="#print/' + kidId + '">Print</a></div>' +
+      PDPEF.GOALS.map(function (g) {
+        var cell = grid[kidId][g.code] || [];
+        return (g.code[1] === "a"
+            ? '<p class="goalhead"><b>' + g.area + ") " + esc(PDPEF.AREAS[g.area]) + "</b></p>" : "") +
+          '<div class="card" data-goal="' + g.code + '"><b>' + g.code + ") " + esc(g.text) +
+          "</b><br>" + (cell.length ? cell.map(function (en) {
+            var ev = evText[en.ev_id] || { text: en.ev_id };
+            return '<span class="pill">' + esc(ev.text) +
+              (ev.kid_only ? ' <span class="muted">(note)</span>' : "") + "</span>";
+          }).join("") : '<span class="muted">Tap to add evidence.</span>') + "</div>";
+      }).join(""));
+    document.querySelectorAll(".card[data-goal]").forEach(function (c) {
+      c.onclick = function () { openEditor(kidId, c.dataset.goal, function () { renderKid(kidId); }); };
+    });
+  }
+  function renderPrint(sel) {
+    var v = view();
+    var grid = PDPEF.buildGrid(state.data.roster, v.entries);
+    var evText = {};
+    v.library.forEach(function (e) { evText[e.ev_id] = e; });
+    var kids = sel === "all" ? state.data.roster
+      : state.data.roster.filter(function (k) { return k.kid_id === sel; });
+    if (!kids.length) { location.hash = "#grid"; return; }
+    var pages = kids.map(function (k) {
+      return '<div class="printkid" style="max-width:19cm;margin:0 auto 2rem;">' +
+        '<div style="text-align:center;border-bottom:2px solid #333;padding:.5rem 0;margin-bottom:.8rem;">' +
+        "<h2 style='margin:.1rem'>CISV Village</h2>" +
+        "<h3 style='margin:.1rem'>Personal Development Programme Evaluation Form</h3>" +
+        "<p style='margin:.2rem'><b>" + esc(k.name) + "</b> — " + esc(k.country) + "</p></div>" +
+        ["1", "2", "3", "4"].map(function (area) {
+          return "<h4 style='margin:.6rem 0 .2rem'>" + area + ") " + esc(PDPEF.AREAS[area]) + "</h4>" +
+            '<table style="width:100%;border-collapse:collapse;font-size:.85rem">' +
+            PDPEF.GOALS.filter(function (g) { return g.area === area; }).map(function (g) {
+              var cell = (grid[k.kid_id] || {})[g.code] || [];
+              return '<tr><td style="border:1px solid #999;padding:.3rem;width:38%;vertical-align:top">' +
+                g.code + ") " + esc(g.text) + "</td>" +
+                '<td style="border:1px solid #999;padding:.3rem;vertical-align:top">' +
+                (cell.length ? "<ul style='margin:.1rem 0 .1rem 1.1rem;padding:0'>" +
+                  cell.map(function (en) {
+                    var ev = evText[en.ev_id] || { text: en.ev_id };
+                    return "<li>" + esc(ev.text) + "</li>";
+                  }).join("") + "</ul>" : "") +
+                "</td></tr>";
+            }).join("") + "</table>";
+        }).join("") + "</div>";
+    }).join("");
+    renderShell("Print",
+      '<p class="muted noprint">Use your browser\'s Print (share menu on phones) to save as PDF. ' +
+      'Printing <b>' + (sel === "all" ? "all " + kids.length + " participants" : esc(kids[0].name)) +
+      "</b> — <a href='#print/all'>all</a>.</p>" + pages);
+  }
+
+  window.addEventListener("hashchange", render);
+
+  (function start() {
+    if (typeof google !== "undefined") { boot(); return; } // served by Apps Script
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+      var s = document.createElement("script"); // local dev: load the mock backend
+      s.src = "/local/mock.js";
+      s.onload = function () { window.MOCK_READY.then(boot); };
+      document.head.appendChild(s);
+      return;
+    }
+    if (EXEC_URL) { boot(); return; } // static hosting, already configured
+    showSetup(); // static hosting, first visit: ask for the camp code
+  })();
+</script>
