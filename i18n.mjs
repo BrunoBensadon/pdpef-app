@@ -1,0 +1,181 @@
+"use strict";
+// Interface strings, English + Portuguese. Flat dotted keys; placeholders look like {name}.
+// Both dictionaries must have identical keys (enforced by i18n.test.mjs).
+// User-typed evidence text is never translated; framework wording comes from the DB.
+
+export const LANGS = ["en", "pt"];
+
+export const DICT = {
+  en: {
+    "common.done": "Done", "common.close": "Close", "common.cancel": "Cancel",
+    "common.copy": "Copy", "common.copied": "Copied", "common.back": "Back",
+    "nav.overview": "Overview", "nav.byGoal": "By indicator", "nav.byParticipant": "By participant",
+    "menu.open": "Menu", "menu.printAll": "Print all participants", "menu.members": "Members",
+    "menu.admin": "Admin", "menu.language": "Language", "menu.signOut": "Sign out",
+    "menu.yourName": "Your name",
+    "switcher.title": "Your programmes", "switcher.join": "+ Join another programme",
+    "switcher.past": "Past programmes",
+    "role.leader": "leader", "role.staff": "staff",
+    "programme.archived": "This programme is archived — read-only.",
+    "queue.saving": "Saving {n}…", "queue.saving.one": "Saving 1…",
+    "queue.signInAgain": "Sign in again to save {n} changes.",
+    "queue.signInAgain.one": "Sign in again to save 1 change.",
+    "queue.signInButton": "Sign in again",
+    "queue.signOutPending": "You have {n} unsaved changes. They stay on this device and are saved when you sign in again. Sign out anyway?",
+    "queue.signOutPending.one": "You have 1 unsaved change. It stays on this device and is saved when you sign in again. Sign out anyway?",
+    "load.failed": "Could not load: {msg}", "load.retry": "Retry",
+    "error.forbidden": "You don't have permission for that.",
+    "error.notFound": "That item no longer exists.", "error.invalid": "Not saved: {msg}",
+    "error.generic": "Something went wrong: {msg}",
+    "grid.participant": "Participant",
+    "grid.help": "Tap a cell to add evidence. Tap an indicator code to see its wording, or a name for the focused views.",
+    "grid.openIndicator": "open indicator ▸",
+    "editor.noEvidence": "No evidence yet.", "editor.search": "Search evidence or type new…",
+    "editor.addShared": "Add as shared evidence", "editor.addNote": "Add as note for {name} only",
+    "editor.noteTag": "(note)", "editor.undo": "undo", "editor.removed": "Removed",
+    "editor.confirmRemove": "Remove this evidence from {name}?",
+    "editor.readOnly": "Read-only — this programme is archived.",
+    "goal.addSeveral": "Add to several participants…", "goal.add": "+ Add",
+    "multi.title": "Add to several participants — {code}", "multi.useNew": "Use as new shared evidence",
+    "multi.apply": "Apply", "multi.change": "Change evidence",
+    "participant.print": "Print", "participant.tapToAdd": "Tap to add evidence.",
+    "auth.title": "Sign in to PDPEF", "auth.google": "Continue with Google", "auth.or": "or",
+    "auth.email": "Email", "auth.password": "Password", "auth.signIn": "Sign in",
+    "auth.createAccount": "Create account", "auth.forgot": "Forgot password?",
+    "auth.signUpTitle": "Create your account", "auth.displayName": "Your name (shown to other leaders)",
+    "auth.signUp": "Create account", "auth.haveAccount": "I already have an account",
+    "auth.checkEmail": "Check your email to confirm your address, then sign in.",
+    "auth.resetTitle": "Reset your password", "auth.sendReset": "Send reset link",
+    "auth.resetSent": "If that email has an account, a reset link is on its way.",
+    "auth.newPassword": "New password", "auth.setPassword": "Set new password",
+    "auth.passwordSet": "Password updated.", "auth.back": "Back to sign in",
+    "auth.err.invalid": "Wrong email or password.",
+    "auth.err.unconfirmed": "Confirm your email first — check your inbox.",
+    "auth.err.weak": "Password must be at least 8 characters.",
+    "auth.err.nameRequired": "Please enter your name.",
+    "auth.err.exists": "There is already an account with that email.",
+    "join.title": "Join a programme",
+    "join.help": "Enter the programme code you received from the camp staff.",
+    "join.code": "Programme code", "join.next": "Next", "join.notFound": "No programme with that code.",
+    "join.pickDelegation": "Which delegation are you with in {name}?", "join.signOut": "Sign out",
+    "join.tooMany": "Too many wrong codes. Try again in an hour.",
+    "members.title": "Members", "members.joinCode": "Join code", "members.regenerate": "New code",
+    "members.confirmRegenerate": "Make a new code? The old one stops working.",
+    "members.makeStaff": "Make staff", "members.makeLeader": "Make leader", "members.remove": "Remove",
+    "members.confirmRemove": "Remove {name} from this programme?", "members.delegation": "Delegation",
+    "members.lastStaff": "A programme needs at least one staff member.", "members.saved": "Saved", "members.youLeft": "You left this programme.", "members.pickDelegation": "Choose a delegation first.", "members.copyManually": "Copy the code manually.",
+    "admin.title": "Admin", "admin.newProgramme": "New programme", "admin.name": "Name",
+    "admin.year": "Year", "admin.theme": "Theme", "admin.framework": "Framework",
+    "admin.roster": "Roster — one per line: name, country, gender",
+    "admin.create": "Create programme", "admin.created": "Created. Join code: {code}",
+    "admin.rosterError": "Roster line {line}: needs a name and a country.",
+    "admin.all": "All programmes", "admin.open": "Open", "admin.archive": "Archive",
+    "admin.unarchive": "Unarchive", "admin.addParticipants": "Add participants",
+    "admin.added": "{n} participants added.", "admin.added.one": "1 participant added.", "admin.savedRefreshFailed": "Saved, but the list could not be refreshed. Reload the page.", "admin.archived": "archived",
+    "print.help": "Use your browser's Print (share menu on phones) to save as PDF.",
+    "print.printing": "Printing {what}", "print.all": "all {n} participants", "print.allLink": "print all",
+    "print.formLanguage": "Form language",
+    "form.participant": "Participant:", "form.yn": "Y/N", "form.comment": "Comment/Evidence",
+    "form.yes": "Y", "form.no": "N",
+  },
+  pt: {
+    "common.done": "Pronto", "common.close": "Fechar", "common.cancel": "Cancelar",
+    "common.copy": "Copiar", "common.copied": "Copiado", "common.back": "Voltar",
+    "nav.overview": "Visão geral", "nav.byGoal": "Por indicador", "nav.byParticipant": "Por participante",
+    "menu.open": "Menu", "menu.printAll": "Imprimir todos os participantes", "menu.members": "Membros",
+    "menu.admin": "Administração", "menu.language": "Idioma", "menu.signOut": "Sair",
+    "menu.yourName": "Seu nome",
+    "switcher.title": "Seus programas", "switcher.join": "+ Entrar em outro programa",
+    "switcher.past": "Programas anteriores",
+    "role.leader": "líder", "role.staff": "staff",
+    "programme.archived": "Este programa está arquivado — somente leitura.",
+    "queue.saving": "Salvando {n}…", "queue.saving.one": "Salvando 1…",
+    "queue.signInAgain": "Entre novamente para salvar {n} alterações.",
+    "queue.signInAgain.one": "Entre novamente para salvar 1 alteração.",
+    "queue.signInButton": "Entrar novamente",
+    "queue.signOutPending": "Você tem {n} alterações não salvas. Elas ficam neste aparelho e serão salvas quando você entrar novamente. Sair mesmo assim?",
+    "queue.signOutPending.one": "Você tem 1 alteração não salva. Ela fica neste aparelho e será salva quando você entrar novamente. Sair mesmo assim?",
+    "load.failed": "Não foi possível carregar: {msg}", "load.retry": "Tentar de novo",
+    "error.forbidden": "Você não tem permissão para isso.",
+    "error.notFound": "Esse item não existe mais.", "error.invalid": "Não foi salvo: {msg}",
+    "error.generic": "Algo deu errado: {msg}",
+    "grid.participant": "Participante",
+    "grid.help": "Toque em uma célula para adicionar evidências. Toque no código de um indicador para ver o texto, ou em um nome para as visões detalhadas.",
+    "grid.openIndicator": "abrir indicador ▸",
+    "editor.noEvidence": "Nenhuma evidência ainda.", "editor.search": "Busque evidências ou digite uma nova…",
+    "editor.addShared": "Adicionar como evidência compartilhada", "editor.addNote": "Adicionar como nota só para {name}",
+    "editor.noteTag": "(nota)", "editor.undo": "desfazer", "editor.removed": "Removido",
+    "editor.confirmRemove": "Remover esta evidência de {name}?",
+    "editor.readOnly": "Somente leitura — este programa está arquivado.",
+    "goal.addSeveral": "Adicionar a vários participantes…", "goal.add": "+ Adicionar",
+    "multi.title": "Adicionar a vários participantes — {code}", "multi.useNew": "Usar como nova evidência compartilhada",
+    "multi.apply": "Aplicar", "multi.change": "Trocar evidência",
+    "participant.print": "Imprimir", "participant.tapToAdd": "Toque para adicionar evidência.",
+    "auth.title": "Entrar no PDPEF", "auth.google": "Continuar com o Google", "auth.or": "ou",
+    "auth.email": "E-mail", "auth.password": "Senha", "auth.signIn": "Entrar",
+    "auth.createAccount": "Criar conta", "auth.forgot": "Esqueceu a senha?",
+    "auth.signUpTitle": "Crie sua conta", "auth.displayName": "Seu nome (visível para outros líderes)",
+    "auth.signUp": "Criar conta", "auth.haveAccount": "Já tenho uma conta",
+    "auth.checkEmail": "Confira seu e-mail para confirmar o endereço e depois entre.",
+    "auth.resetTitle": "Redefinir sua senha", "auth.sendReset": "Enviar link de redefinição",
+    "auth.resetSent": "Se esse e-mail tiver uma conta, um link de redefinição foi enviado.",
+    "auth.newPassword": "Nova senha", "auth.setPassword": "Definir nova senha",
+    "auth.passwordSet": "Senha atualizada.", "auth.back": "Voltar ao login",
+    "auth.err.invalid": "E-mail ou senha incorretos.",
+    "auth.err.unconfirmed": "Confirme seu e-mail primeiro — veja sua caixa de entrada.",
+    "auth.err.weak": "A senha precisa ter pelo menos 8 caracteres.",
+    "auth.err.nameRequired": "Digite seu nome.",
+    "auth.err.exists": "Já existe uma conta com esse e-mail.",
+    "join.title": "Entrar em um programa",
+    "join.help": "Digite o código do programa que você recebeu da equipe do acampamento.",
+    "join.code": "Código do programa", "join.next": "Continuar", "join.notFound": "Nenhum programa com esse código.",
+    "join.pickDelegation": "Com qual delegação você está em {name}?", "join.signOut": "Sair",
+    "join.tooMany": "Muitos códigos errados. Tente de novo em uma hora.",
+    "members.title": "Membros", "members.joinCode": "Código de entrada", "members.regenerate": "Gerar novo código",
+    "members.confirmRegenerate": "Gerar um novo código? O antigo deixa de funcionar.",
+    "members.makeStaff": "Tornar staff", "members.makeLeader": "Tornar líder", "members.remove": "Remover",
+    "members.confirmRemove": "Remover {name} deste programa?", "members.delegation": "Delegação",
+    "members.lastStaff": "Um programa precisa de pelo menos um membro do staff.", "members.saved": "Salvo", "members.youLeft": "Você saiu deste programa.", "members.pickDelegation": "Escolha uma delegação primeiro.", "members.copyManually": "Copie o código manualmente.",
+    "admin.title": "Administração", "admin.newProgramme": "Novo programa", "admin.name": "Nome",
+    "admin.year": "Ano", "admin.theme": "Tema", "admin.framework": "Modelo de avaliação",
+    "admin.roster": "Lista de participantes — um por linha: nome, país, gênero",
+    "admin.create": "Criar programa", "admin.created": "Criado. Código de entrada: {code}",
+    "admin.rosterError": "Linha {line} da lista: precisa de nome e país.",
+    "admin.all": "Todos os programas", "admin.open": "Abrir", "admin.archive": "Arquivar",
+    "admin.unarchive": "Desarquivar", "admin.addParticipants": "Adicionar participantes",
+    "admin.added": "{n} participantes adicionados.", "admin.added.one": "1 participante adicionado.", "admin.savedRefreshFailed": "Salvo, mas não foi possível atualizar a lista. Recarregue a página.", "admin.archived": "arquivado",
+    "print.help": "Use a opção Imprimir do navegador (menu de compartilhar no celular) para salvar em PDF.",
+    "print.printing": "Imprimindo {what}", "print.all": "todos os {n} participantes", "print.allLink": "imprimir todos",
+    "print.formLanguage": "Idioma do formulário",
+    "form.participant": "Participante:", "form.yn": "S/N", "form.comment": "Comentário/Evidência",
+    "form.yes": "S", "form.no": "N",
+  },
+};
+
+let current = "en";
+
+export function detectLang(navLang) {
+  return /^pt\b/i.test(String(navLang || "")) ? "pt" : "en";
+}
+
+export function setLang(lang) {
+  current = LANGS.indexOf(lang) >= 0 ? lang : "en";
+  if (typeof document !== "undefined") document.documentElement.lang = current === "pt" ? "pt-BR" : "en";
+}
+
+export function getLang() { return current; }
+
+export function createT(lang) {
+  return function (key, vars) {
+    let s = DICT[lang] && DICT[lang][key];
+    if (s == null) s = DICT.en[key];
+    if (s == null) { console.warn("i18n: missing key " + key); return key; }
+    return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
+  };
+}
+
+export function t(key, vars) { return createT(current)(key, vars); }
+
+// Count-aware t(): uses `key + ".one"` when n === 1 (and that key exists), and passes n as {n}.
+export function pluralKey(key, n) { return n === 1 && DICT.en[key + ".one"] != null ? key + ".one" : key; }
+export function tn(key, n, vars) { return t(pluralKey(key, n), Object.assign({ n }, vars)); }
