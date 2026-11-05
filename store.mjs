@@ -82,14 +82,15 @@ export function isStaff() { if (state.profile.is_admin) return true; const m = m
 export function canWrite() { return !state.data.programme.archived || !!state.profile.is_admin; }
 export function myDelegation() { const m = membership(); return (m && m.delegation) || ""; }
 export function participantById(id) { return state.data.participants.find(p => p.id === id) || null; }
-// Where "Back" and post-reset should go: the current/last/latest programme, else the join screen.
+// Where "Back" and post-reset should go: the current/last/latest programme, else the Admin screen
+// for a platform admin, else the join screen.
 export function homeHash() {
   const ids = state.memberships.map(x => x.programme.id);
   const isMine = id => !!id && ids.indexOf(id) >= 0;
   let last = null;
   try { last = localStorage.getItem("pdpef-last-programme"); } catch (e) { /* ignore */ }
   const pid = state.programmeId || [last, state.profile && state.profile.last_programme_id].find(isMine) || ids[ids.length - 1];
-  return pid ? "#p/" + encodeURIComponent(pid) + "/grid" : "#join";
+  return pid ? "#p/" + encodeURIComponent(pid) + "/grid" : state.profile && state.profile.is_admin ? "#admin" : "#join";
 }
 export function route(path) { return "#p/" + encodeURIComponent(state.programmeId) + "/" + path; }
 

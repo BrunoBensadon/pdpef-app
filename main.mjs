@@ -152,6 +152,12 @@ function renderOutside(h) {
   if (h === "#join") return renderJoin();
   if (h === "#admin") return state.profile.is_admin ? renderAdmin() : renderJoin();
   if (state.programmeId && state.data) { location.hash = route("grid"); return; }
+  // A platform admin need not belong to any programme (the import creates no memberships):
+  // their home is the Admin screen, not a join screen with no way out.
+  if (state.profile.is_admin) {
+    history.replaceState(null, "", location.pathname + location.search + "#admin");
+    return renderAdmin();
+  }
   return renderJoin();
 }
 

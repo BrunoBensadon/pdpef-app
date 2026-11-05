@@ -4,5 +4,5 @@ export const SUPABASE_JS_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-
 
 export const ENVIRONMENTS = {
   production: { url: "https://mhoudznlcwibsxokgwzk.supabase.co", anonKey: "sb_publishable_oA5Bj2T9g0RKQtvzX7CHUw_f8oqyc7n" },
-  staging: { url: "https://mhoudznlcwibsxokgwzk.supabase.co", anonKey: "sb_publishable_oA5Bj2T9g0RKQtvzX7CHUw_f8oqyc7n" },
+  staging: { url: "https://lqsqiwmkvkllppkdgpcy.supabase.co/", anonKey: "sb_publishable_hQ77YkbQzuvT1jd2AjwnPQ_z5iAnejW" },
 };

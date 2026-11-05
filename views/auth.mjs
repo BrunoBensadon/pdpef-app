@@ -138,14 +138,16 @@ export function renderJoin() {
     });
     return;
   }
-  const back = homeHash() === "#join" ? "" : homeHash();
+  const home = homeHash(), back = home.startsWith("#p/") ? home : "";
+  const adminLink = state.profile && state.profile.is_admin
+    ? '<a href="#admin" id="joinAdmin">' + esc(t("menu.admin")) + "</a> · " : "";
   frame(t("join.title"),
     '<p class="muted">' + esc(t("join.help")) + "</p>" +
     '<form id="joinForm" class="authform" novalidate>' +
       '<label>' + esc(t("join.code")) + '<input type="text" id="code" autocomplete="off" autocapitalize="characters" required></label>' +
       '<p class="formerr" id="err"></p>' +
       '<button class="btn primary wide" type="submit">' + esc(t("join.next")) + "</button></form>" +
-    "<p>" + (back ? '<a href="' + back + '">' + esc(t("common.back")) + "</a> · " : "") +
+    "<p>" + (back ? '<a href="' + back + '">' + esc(t("common.back")) + "</a> · " : "") + adminLink +
     '<a href="#" id="joinSignOut">' + esc(t("join.signOut")) + "</a></p>");
   document.getElementById("joinSignOut").onclick = e => { e.preventDefault(); signOut(); };
   const form = document.getElementById("joinForm");
