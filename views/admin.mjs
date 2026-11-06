@@ -1,16 +1,22 @@
 "use strict";
 import { state, route, reloadData } from "../store.mjs";
-import { parseRosterCsv, txt } from "../logic.mjs";
-import { t, tn, getLang } from "../i18n.mjs";
+import { parseRosterCsv, txt, normGender, isReservedDelegation } from "../logic.mjs";
+import { t, getLang } from "../i18n.mjs";
 import { esc, app, toast, errorText, showSkeleton, copyText, LOGO_MARK } from "../ui.mjs";
 import { authBanner, bindAuthBanner } from "../shell.mjs";
 
 // Re-checked after every await: the user may have signed out, switched, or left #admin meanwhile.
 const onAdmin = () => !!(state.session && state.profile && state.profile.is_admin && location.hash === "#admin");
 
-function roster(text, errEl) {
-  try { return parseRosterCsv(text); }
+function roster(text, errEl, fw) {
+  let rows;
+  try { rows = parseRosterCsv(text); }
   catch (err) { if (errEl) errEl.textContent = t("admin.rosterError", { line: err.line }); return null; }
+  const bad = rows.find(r => normGender(r.gender) === null);
+  if (bad) { if (errEl) errEl.textContent = t("admin.genderError", { value: bad.gender }); return null; }
+  const reserved = rows.find(r => isReservedDelegation(fw, r.country));
+  if (reserved) { if (errEl) errEl.textContent = t("setup.reserved", { name: String(reserved.country).trim() }); return null; }
+  return rows.map(r => Object.assign({}, r, { gender: normGender(r.gender) }));
 }
 
 function bar(back) {
@@ -37,6 +43,7 @@ export async function renderAdmin(message, createdCode) {
   app().innerHTML = bar(back) + "<main>" + authBanner() +
     '<div class="card"><h3>' + esc(t("admin.newProgramme")) + '</h3><form id="newProg" class="authform" novalidate>' +
       field(t("admin.name"), "aName") + field(t("admin.year"), "aYear") + field(t("admin.theme"), "aTheme") +
+      "<label>" + esc(t("admin.finalDay")) + '<input type="date" id="aEnd"></label>' +
       "<label>" + esc(t("admin.framework")) + '<select id="aFramework">' + frameworks.map(f =>
         '<option value="' + esc(f.key) + '">' + esc(txt(f.name, lang)) + "</option>").join("") + "</select></label>" +
       "<label>" + esc(t("admin.roster")) + '<textarea id="aRoster"></textarea></label>' +
@@ -49,10 +56,8 @@ export async function renderAdmin(message, createdCode) {
       " · <code>" + esc(p.join_code) + '</code> <button class="btn acopy">' + esc(t("common.copy")) + "</button>" +
       (p.archived ? ' <span class="muted">(' + esc(t("admin.archived")) + ")</span>" : "") +
       '</span><span><a class="btn aopen" href="#p/' + encodeURIComponent(p.id) + '/grid">' + esc(t("admin.open")) + "</a> " +
-      '<button class="btn aarch">' + esc(t(p.archived ? "admin.unarchive" : "admin.archive")) + "</button></span>" +
-      '<details style="width:100%"><summary>' + esc(t("admin.addParticipants")) + '</summary><textarea class="aroster"></textarea>' +
-      '<p class="formerr aerr"></p><button class="btn aadd">' + esc(t("admin.addParticipants")) +
-      "</button></details></div>").join("") + "</div></main>";
+      '<a class="btn asetup" href="#p/' + encodeURIComponent(p.id) + '/setup">' + esc(t("admin.setup")) + "</a> " +
+      '<button class="btn aarch">' + esc(t(p.archived ? "admin.unarchive" : "admin.archive")) + "</button></span></div>").join("") + "</div></main>";
 
   bindAuthBanner();
   if (createdCode) document.getElementById("copyCreated").onclick = () => copyText(createdCode, document.getElementById("createdCode"));
@@ -61,7 +66,8 @@ export async function renderAdmin(message, createdCode) {
     e.preventDefault();
     const errEl = document.getElementById("adminErr");
     errEl.textContent = "";
-    const rows = roster(document.getElementById("aRoster").value, errEl);
+    const fwKey = document.getElementById("aFramework").value;
+    const rows = roster(document.getElementById("aRoster").value, errEl, frameworks.find(f => f.key === fwKey));
     if (!rows) return;
     const submit = e.target.querySelector('button[type="submit"]');
     if (submit.disabled) return;
@@ -71,7 +77,8 @@ export async function renderAdmin(message, createdCode) {
       res = await state.backend.createProgramme({
         frameworkKey: document.getElementById("aFramework").value,
         name: document.getElementById("aName").value, year: document.getElementById("aYear").value,
-        theme: document.getElementById("aTheme").value, roster: rows });
+        theme: document.getElementById("aTheme").value,
+        endDate: document.getElementById("aEnd").value || null, roster: rows });
     } catch (err) {
       const el = document.getElementById("adminErr");
       if (el) el.textContent = errorText(err);
@@ -98,22 +105,6 @@ export async function renderAdmin(message, createdCode) {
         state.memberships = await state.backend.myMemberships();
         if (p.id === state.programmeId) await reloadData();
       } catch (err) { toast(t("admin.savedRefreshFailed"), "error"); }
-      if (onAdmin()) renderAdmin();
-    };
-    card.querySelector(".aadd").onclick = async e => {
-      const btn = e.currentTarget, errEl = card.querySelector(".aerr");
-      errEl.textContent = "";
-      const rows = roster(card.querySelector(".aroster").value, errEl);
-      if (!rows) return;
-      if (btn.disabled) return;
-      btn.disabled = true;
-      let n;
-      try { n = await state.backend.addParticipants(p.id, rows); }
-      catch (err) { toast(errorText(err), "error"); btn.disabled = false; return; }
-      // Written: the button stays disabled; the re-render replaces the form.
-      try { if (p.id === state.programmeId) await reloadData(); }
-      catch (err) { toast(t("admin.savedRefreshFailed"), "error"); }
-      toast(tn("admin.added", n), "success");
       if (onAdmin()) renderAdmin();
     };
   });

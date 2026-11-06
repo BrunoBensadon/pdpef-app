@@ -1,7 +1,7 @@
 "use strict";
 // The official CISV Individual Evaluation Form, one A4 sheet per participant.
 import { state, view, gridOf, evidenceIndex, route, render } from "../store.mjs";
-import { indicatorsByGoal, txt } from "../logic.mjs";
+import { indicatorsByGoal, txt, printedEvidence } from "../logic.mjs";
 import { t, getLang, createT } from "../i18n.mjs";
 import { esc, langToggle } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
@@ -25,7 +25,7 @@ export function renderPrint(sel) {
       groups.map(({ goal, indicators }) =>
         '<tr class="goalrow"><td colspan="3">' + esc(goal.code) + ") " + esc(txt(goal.text, lang)) + "</td></tr>" +
         indicators.map(ind => {
-          const texts = ((g[p.id] || {})[ind.code] || []).map(en => evIdx[en.evidence_id]).filter(Boolean).map(ev => ev.text);
+          const texts = printedEvidence(g, evIdx, p.id, ind.code).map(ev => ev.text);
           // Y/N follows the evidence actually printed, so Y never sits next to an empty comment.
           const yn = texts.length ? tf("form.yes") : tf("form.no");
           return "<tr><td>" + esc(ind.code) + ") " + esc(txt(ind.text, lang)) + '</td><td class="yn">' + esc(yn) + "</td><td>" +

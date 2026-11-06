@@ -1,8 +1,8 @@
 "use strict";
 import { state, view, gridOf, evidenceIndex, route, canWrite, myDelegation } from "../store.mjs";
-import { indicatorsOf, findIndicator, findGoal, txt, delegationsOf, neighbours } from "../logic.mjs";
+import { indicatorsOf, findIndicator, findGoal, txt, delegationsOf, neighbours, goalStyle } from "../logic.mjs";
 import { t, getLang } from "../i18n.mjs";
-import { esc } from "../ui.mjs";
+import { esc, tagChip } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
 import { openEditor, openMultiAdd } from "./editor.mjs";
 
@@ -20,7 +20,7 @@ export function renderGoal(code) {
   const link = c => esc(route("goal/" + encodeURIComponent(c)));
   renderShell("goal",
     '<div class="card"><a href="' + link(nb.prev) + '">←</a> <b>' + esc(code) + ") " +
-    esc(txt(ind.text, lang)) + '</b> <a href="' + link(nb.next) + '">→</a>' +
+    esc(txt(ind.text, lang)) + "</b>" + tagChip(ind) + ' <a href="' + link(nb.next) + '">→</a>' +
     '<p class="goalhead">' + esc(goal ? txt(goal.text, lang) : "") + "</p>" +
     '<select id="deleg">' + countries.map(c => "<option " + (c === country ? "selected" : "") + ">" + esc(c) + "</option>").join("") +
     "</select> " +
@@ -28,7 +28,7 @@ export function renderGoal(code) {
     "</div>" +
     kids.map(k => {
       const cell = ((g[k.id] || {})[code] || []).filter(en => evIdx[en.evidence_id]); // skip missing evidence
-      return '<div class="card a' + esc(ind.goal_code) + '"><b><a href="' + esc(route("participant/" + encodeURIComponent(k.id))) +
+      return '<div class="card goalcol" style="' + esc(goalStyle(fw, ind.goal_code)) + '"><b><a href="' + esc(route("participant/" + encodeURIComponent(k.id))) +
         '" style="color: #0072CE">' + esc(k.name) + "</a></b><br>" +
         (cell.length ? cell.map(en => '<span class="pill">' + esc(evIdx[en.evidence_id].text) + "</span>").join("")
           : '<span class="muted">' + esc(t("editor.noEvidence")) + "</span>") +

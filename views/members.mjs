@@ -1,24 +1,30 @@
 "use strict";
 import { state, render, reloadData, canWrite, homeHash } from "../store.mjs";
-import { delegationsOf } from "../logic.mjs";
+import { delegationsOf, joinOnlyDelegations, STAFF_DELEGATION } from "../logic.mjs";
 import { t } from "../i18n.mjs";
 import { esc, toast, errorText, copyText } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
 
+// Leaders who joined under "Staff" come first: they are waiting to be promoted.
+const rank = m => (m.role === "leader" && m.delegation === STAFF_DELEGATION ? 0 : m.role === "staff" ? 1 : 2);
+
 export function renderMembers() {
-  const d = state.data, pid = d.programme.id, delegs = delegationsOf(d.participants), rw = canWrite();
-  const members = d.members.slice().sort((a, b) => a.role === b.role
-    ? a.display_name.localeCompare(b.display_name) : (a.role === "staff" ? -1 : 1));
+  const d = state.data, pid = d.programme.id, rw = canWrite();
+  const delegs = delegationsOf(d.participants).concat(joinOnlyDelegations(d.framework));
+  const members = d.members.slice().sort((a, b) => rank(a) - rank(b) || a.display_name.localeCompare(b.display_name));
+  const waiting = members.filter(m => rank(m) === 0).length;
   renderShell(null,
     '<div class="card"><h3>' + esc(t("members.title")) + "</h3><p>" + esc(t("members.joinCode")) +
     ': <code class="joincode" id="joinCode">' + esc(d.programme.join_code) + "</code></p>" +
     '<p><button class="btn" id="copyCode">' + esc(t("common.copy")) + "</button>" + (rw ? ' <button class="btn" id="regen">' +
     esc(t("members.regenerate")) + "</button>" : "") + "</p></div>" +
+    (waiting && rw ? '<p class="muted" id="staffJoiners">' + esc(t("members.joinedAsStaff")) + "</p>" : "") +
     members.map(m => '<div class="card member" data-user="' + esc(m.user_id) + '"><b>' + esc(m.display_name) +
       '</b> <span class="muted">' + esc(t("role." + m.role)) + "</span><br><label>" + esc(t("members.delegation")) +
       ' <select class="mdeleg"' + (rw ? "" : " disabled") + ">" + (m.role === "staff" ? '<option value=""></option>' : "") +
       delegs.map(c => "<option" + (c === m.delegation ? " selected" : "") + ">" + esc(c) + "</option>").join("") + "</select></label>" +
-      (rw ? ' <button class="btn mrole">' + esc(t(m.role === "staff" ? "members.makeLeader" : "members.makeStaff")) + "</button> " +
+      (rw ? ' <button class="btn mrole' + (rank(m) === 0 ? " primary" : "") + '">' +
+        esc(t(m.role === "staff" ? "members.makeLeader" : "members.makeStaff")) + "</button> " +
         '<button class="btn danger mremove">' + esc(t("members.remove")) + "</button>" : "") + "</div>").join(""));
 
   async function act(fn, after) {

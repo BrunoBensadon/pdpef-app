@@ -3,6 +3,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PDPEF</title>
 <style>
+  table.sheet { border-collapse:collapse; }
+  table.sheet td, table.sheet th { border:1px solid #e5e3dc; padding:.2rem .45rem; text-align:left; white-space:nowrap; }
+  table.sheet td.yn { text-align:center; font-weight:700; }
+  table.sheet .sname { color:#888; }
   @font-face { font-family:"Overpass"; font-weight:700; font-display:swap;
     src:url("fonts/overpass-700.woff2") format("woff2"); }
   @font-face { font-family:"Source Serif 4"; font-weight:400; font-display:swap;
@@ -72,28 +76,20 @@
   table.grid th.kid { position:sticky; left:0; background:var(--card); text-align:left;
     max-width:9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; z-index:2;
     font-weight:600; }
-  table.grid th.g1 { background:var(--area1bg); color:var(--area1); }
-  table.grid th.g2 { background:var(--area2bg); color:var(--area2); }
-  table.grid th.g3 { background:var(--area3bg); color:var(--area3); }
-  table.grid th.g4 { background:var(--area4bg); color:var(--area4); }
+  table.grid th.goalcol, .goalhint.goalcol, td.cell.some.goalcol { background:var(--goalbg); color:var(--goal); }
+  .card.goalcol { border-left-color:var(--goal); }
+  .tag { display:inline-block; margin-left:.4em; padding:0 .5em; border-radius:999px; font-size:.75rem;
+    font-weight:600; background:#efeee9; color:#555; vertical-align:middle; }
   table.grid th a { color:inherit; text-decoration:none; font-weight:800; }
   .goalhint { position:sticky; top:3.4rem; z-index:4; display:flex; align-items:center;
     justify-content:space-between; gap:var(--s2); padding:.5rem .8rem; margin-bottom:var(--s2);
     border-radius:var(--r); font-size:.85rem; box-shadow:var(--sh); }
   .goalhint:empty { display:none; padding:0; margin:0; box-shadow:none; }
   .goalhint a { color:inherit; font-weight:800; text-decoration:none; white-space:nowrap; }
-  .goalhint.a1 { background:var(--area1bg); color:var(--area1); }
-  .goalhint.a2 { background:var(--area2bg); color:var(--area2); }
-  .goalhint.a3 { background:var(--area3bg); color:var(--area3); }
-  .goalhint.a4 { background:var(--area4bg); color:var(--area4); }
   tr.deleg td { background:var(--ink); color:#fff; font-weight:700; text-align:left;
     letter-spacing:.02em; }
   td.cell { cursor:pointer; color:var(--dim); min-height:2.2rem; }
   td.cell.some { font-weight:700; }
-  td.cell.some.a1 { background:var(--area1bg); color:var(--area1); }
-  td.cell.some.a2 { background:var(--area2bg); color:var(--area2); }
-  td.cell.some.a3 { background:var(--area3bg); color:var(--area3); }
-  td.cell.some.a4 { background:var(--area4bg); color:var(--area4); }
   td.cell:active { outline:2px solid var(--orange); outline-offset:-2px; }
   .pill { display:inline-flex; align-items:center; background:#eae9e9; color:#201e1d;
     border:1px solid transparent; border-radius:2px; padding:.25rem .6rem; margin:.15rem;
@@ -146,8 +142,6 @@
     font-family:"Source Serif 4",Georgia,"Times New Roman",serif; font-weight:700; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:var(--r);
     padding:var(--s3); margin:var(--s3) 0; box-shadow:var(--sh); border-left:4px solid var(--line); }
-  .card.a1 { border-left-color:var(--area1); } .card.a2 { border-left-color:var(--area2); }
-  .card.a3 { border-left-color:var(--area3); } .card.a4 { border-left-color:var(--area4); }
   .muted { color:var(--dim); font-size:.8rem; }
   input[type=text], input[type=search] { width:100%; padding:.6rem; font-size:1rem;
     border:1px solid var(--line); border-radius:var(--r); font-family:var(--font-body); }
@@ -206,6 +200,16 @@
   .member select { width:auto; display:inline-block; margin:.3rem 0; }
   code.joincode { font-size:1.2rem; font-weight:700; letter-spacing:.05em; }
   .adminlist .card { display:flex; flex-wrap:wrap; gap:var(--s2); align-items:center; justify-content:space-between; }
+  table.setup { border-collapse:collapse; width:100%; }
+  table.setup td, table.setup th { border-bottom:1px solid #e5e3dc; padding:.25rem .4rem; text-align:left; }
+  table.setup tr.deleg td { font-weight:700; padding-top:.8rem; }
+  table.setup input, table.setup select { width:100%; font:inherit; }
+  table.setup tr.del input, table.setup tr.del select { text-decoration:line-through; opacity:.55; }
+  table.setup td.flag select { outline:2px solid #B8860B; }
+  .savebar { position:sticky; bottom:3.6rem; z-index:5; display:flex; gap:.5rem; align-items:center;
+    justify-content:space-between; padding:.6rem .8rem; margin-top:var(--s2); background:#fff8e1;
+    border:1px solid #e6d9a8; border-radius:var(--r); }
+  .savebar[hidden] { display:none; }
   /* Official Individual Evaluation Form (screen preview + print) */
   .printbar { display:flex; flex-wrap:wrap; gap:var(--s2); align-items:center; margin-bottom:var(--s3); }
   .printbar .langtoggle { margin:0; }

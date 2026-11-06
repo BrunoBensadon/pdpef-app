@@ -1,6 +1,6 @@
 "use strict";
 import { state, view, gridOf, evidenceIndex, route, participantById, canWrite } from "../store.mjs";
-import { indicatorsByGoal, txt, neighbours } from "../logic.mjs";
+import { indicatorsByGoal, txt, neighbours, goalStyle } from "../logic.mjs";
 import { t, getLang } from "../i18n.mjs";
 import { esc } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
@@ -25,7 +25,7 @@ export function renderParticipant(pid) {
       '<p class="goalhead"><b>' + esc(goal.code) + ") " + esc(txt(goal.text, lang)) + "</b></p>" +
       indicators.map(ind => {
         const cell = ((g[pid] || {})[ind.code] || []).filter(en => evIdx[en.evidence_id]); // skip missing evidence
-        return '<div class="card a' + esc(ind.goal_code) + '" data-goal="' + esc(ind.code) + '"><b>' + esc(ind.code) + ") " +
+        return '<div class="card goalcol" style="' + esc(goalStyle(state.data.framework, ind.goal_code)) + '" data-goal="' + esc(ind.code) + '"><b>' + esc(ind.code) + ") " +
           esc(txt(ind.text, lang)) + "</b><br>" + (cell.length ? cell.map(en => {
             const ev = evIdx[en.evidence_id];
             return '<span class="pill' + (ev.participant_id ? " note" : "") + '" style="background-color: #FFF4E1">' + esc(ev.text) +

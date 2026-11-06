@@ -2,7 +2,7 @@
 import { state, enqueue, author, view, gridOf, evidenceIndex, isStaff, canWrite, participantById, render } from "../store.mjs";
 import { usageCounts, searchEvidence, findExact, normText, canSelfUndo, findIndicator, txt } from "../logic.mjs";
 import { t, getLang } from "../i18n.mjs";
-import { esc, toast, openSheet, closeSheet } from "../ui.mjs";
+import { esc, tagChip, toast, openSheet, closeSheet } from "../ui.mjs";
 
 // The server rejects evidence text longer than this.
 export const MAX_EVIDENCE = 2000;
@@ -14,7 +14,8 @@ export function openEditor(participantId, code, onDone) {
   const writable = canWrite();
   const el = openSheet();
   // Static shell built ONCE: #q is never recreated, so a keystroke never steals focus.
-  el.innerHTML = '<div class="panel"><h3>' + esc(kid.name) + " (" + esc(kid.country) + ") — " + esc(code) + "</h3>" +
+  el.innerHTML = '<div class="panel"><h3>' + esc(kid.name) + " (" + esc(kid.country) + ") — " + esc(code) +
+    tagChip(ind) + "</h3>" +
     '<p class="goalhead">' + esc(txt(ind.text, getLang())) + "</p>" +
     '<div id="current"></div><hr>' +
     (writable

@@ -160,3 +160,108 @@ export function neighbours(list, item) {
   if (i < 0 || !n) return { prev: null, next: null };
   return { prev: list[(i + n - 1) % n], next: list[(i + 1) % n] };
 }
+
+// Goal colours: the framework's own, else the classic Village palette for goals 1-4, else grey.
+const AREA_DEFAULTS = { "1": "#0072CE", "2": "#509E2F", "3": "#AA0061", "4": "#B8860B" };
+export function goalColour(fw, goalCode) {
+  const g = findGoal(fw, goalCode);
+  return (g && g.colour) || AREA_DEFAULTS[goalCode] || "#6B6B6B";
+}
+// A light background: the colour mixed with white (amount = share of the colour).
+export function tint(hex, amount = 0.09) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = c => Math.round(c * amount + 255 * (1 - amount));
+  return "#" + [n >> 16, (n >> 8) & 255, n & 255].map(c => mix(c).toString(16).padStart(2, "0")).join("");
+}
+export function goalStyle(fw, goalCode) {
+  const c = goalColour(fw, goalCode);
+  return "--goal:" + c + ";--goalbg:" + tint(c);
+}
+
+// Delegations members can pick that never appear among participants (grid, print, sheet).
+export const STAFF_DELEGATION = "Staff";
+export function joinOnlyDelegations(fw) {
+  return [STAFF_DELEGATION].concat((fw && fw.join_delegations) || []);
+}
+export function isReservedDelegation(fw, name) {
+  const n = normText(name).toLowerCase();
+  return joinOnlyDelegations(fw).some(x => x.toLowerCase() === n);
+}
+
+// Genders are stored in English; the UI translates the labels.
+export const GENDERS = ["Male", "Female", "Other"];
+const GENDER_WORDS = {
+  Male: ["m", "male", "masculino", "menino", "boy"],
+  Female: ["f", "female", "feminino", "menina", "girl"],
+  Other: ["o", "other", "outro", "outra"],
+};
+// "" for blank, one of GENDERS, or null when the value is not recognised.
+export function normGender(s) {
+  const v = fold(s);
+  if (!v) return "";
+  return GENDERS.find(g => GENDER_WORDS[g].includes(v)) || null;
+}
+
+// Rows pasted from a spreadsheet: name, delegation, gender. An optional header line is skipped.
+export function parseRosterPaste(text) {
+  const lines = String(text == null ? "" : text).replace(/^\uFEFF/, "").split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) return [];
+  const delim = lines[0].indexOf("\t") >= 0 ? "\t" : lines[0].indexOf(";") >= 0 ? ";" : ",";
+  let rows = lines.map(l => splitRow(l, delim));
+  if (["name", "nome", "participant", "participante"].includes(fold(rows[0][0]).split(" ")[0])) rows = rows.slice(1);
+  return rows.filter(r => r[0]).map(r => {
+    const raw = r[2] || "", g = normGender(raw);
+    return { name: r[0], country: r[1] || "", gender: g || "", genderUnknown: g === null };
+  });
+}
+
+// What a roster draft changes, in save_roster's shape. Rows whose only change is a delegation
+// rename are covered by the rename and not repeated as upserts.
+export function rosterDiff(original, rows, renames) {
+  const byId = {};
+  original.forEach(p => { byId[p.id] = p; });
+  const renamed = c => renames.reduce((x, rn) => (rn.from === x ? rn.to : x), c);
+  const upserts = [], deletes = [];
+  rows.forEach(r => {
+    const o = byId[r.id];
+    if (r.del) { if (o) deletes.push(r.id); return; }
+    const row = { id: r.id, name: normText(r.name), country: normText(r.country), gender: r.gender || "" };
+    if (!o || o.name !== row.name || renamed(o.country) !== row.country || (o.gender || "") !== row.gender) upserts.push(row);
+  });
+  return { renames: renames.filter(x => x.from !== x.to).map(x => ({ from: x.from, to: x.to })), upserts, deletes };
+}
+export function changeCount(diff) { return diff.renames.length + diff.upserts.length + diff.deletes.length; }
+
+// The evidence the printed form shows for one cell. The sheet uses the same rule for "Y",
+// so the sheet and the printout never disagree.
+export function printedEvidence(grid, evIdx, participantId, code) {
+  return ((grid[participantId] || {})[code] || []).map(en => evIdx[en.evidence_id]).filter(Boolean);
+}
+
+export function localDate(d = new Date()) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+export function sheetValue({ hasEvidence, endDate, today }) {
+  if (hasEvidence) return "Y";
+  if (endDate && today >= endDate) return "N";
+  return "";
+}
+
+export function sheetRows(participants, fw, grid, evIdx, endDate, today) {
+  const inds = indicatorsOf(fw), order = delegationsOf(participants);
+  return participants.slice()
+    .sort((a, b) => order.indexOf(a.country) - order.indexOf(b.country) || a.code.localeCompare(b.code, undefined, { numeric: true }))
+    .map(p => ({ id: p.id, name: p.name, delegation: p.country, gender: p.gender || "",
+      values: inds.map(i => sheetValue({ hasEvidence: printedEvidence(grid, evIdx, p.id, i.code).length > 0, endDate, today })) }));
+}
+
+// Data rows only (no header, no names): what the old sheet's B15:T<N> copy gave.
+export function sheetTsv(rows) {
+  return rows.map(r => [r.delegation, r.gender].concat(r.values)
+    .map(c => String(c).replace(/[\t\r\n]+/g, " ")).join("\t")).join("\n");
+}
+
+export function xlsxFileName(programme) {
+  return (programme.name + (programme.year ? " " + programme.year : "") + " PDPEF.xlsx").replace(/[\\/:*?"<>|]+/g, "-");
+}

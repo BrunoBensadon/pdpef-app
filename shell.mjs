@@ -70,7 +70,9 @@ export function renderShell(active, content) {
         (past.length ? "<h4>" + esc(t("switcher.past")) + "</h4>" + past.map(progLink).join("") : "") + "</div>" +
       '<div class="menu" id="appMenu" hidden>' +
         '<button id="printAll">' + esc(t("menu.printAll")) + "</button>" +
-        (isStaff() ? '<button id="membersBtn">' + esc(t("menu.members")) + "</button>" : "") +
+        (isStaff() ? '<button id="membersBtn">' + esc(t("menu.members")) + "</button>" +
+          '<button id="setupBtn">' + esc(t("menu.setup")) + "</button>" +
+          '<button id="sheetBtn">' + esc(t("menu.sheet")) + "</button>" : "") +
         (state.profile.is_admin ? '<button id="adminBtn">' + esc(t("menu.admin")) + "</button>" : "") +
         '<button id="langBtn">' + esc(t("menu.language")) + ": " + (getLang() === "pt" ? "English" : "Português") + "</button>" +
         '<button id="nameBtn">' + esc(t("menu.yourName")) + "</button>" +
@@ -90,6 +92,10 @@ export function renderShell(active, content) {
   document.getElementById("printAll").onclick = () => { location.hash = route("print/all"); };
   const mb = document.getElementById("membersBtn");
   if (mb) mb.onclick = () => { location.hash = route("members"); };
+  const sb = document.getElementById("setupBtn");
+  if (sb) sb.onclick = () => { location.hash = route("setup"); };
+  const shb = document.getElementById("sheetBtn");
+  if (shb) shb.onclick = () => { location.hash = route("sheet"); };
   const ab = document.getElementById("adminBtn");
   if (ab) ab.onclick = () => { location.hash = "#admin"; };
   document.getElementById("langBtn").onclick = () => changeLanguage(getLang() === "pt" ? "en" : "pt");

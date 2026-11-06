@@ -72,3 +72,8 @@ export function langToggle(lang) {
     '<button type="button" data-lang="en" class="' + (lang === "en" ? "on" : "") + '">English</button>' +
     '<button type="button" data-lang="pt" class="' + (lang === "pt" ? "on" : "") + '">Português</button></div>';
 }
+
+// Small chip with an indicator's type tag (awareness, attitude...). Empty when there is none.
+export function tagChip(ind) {
+  return ind && ind.tag ? ' <span class="tag">' + esc(ind.tag) + "</span>" : "";
+}

@@ -12,6 +12,8 @@ import { renderParticipant } from "./views/participant.mjs";
 import { renderMembers } from "./views/members.mjs";
 import { renderAdmin } from "./views/admin.mjs";
 import { renderPrint } from "./views/print.mjs";
+import { renderSetup, leaveSetupOk } from "./views/setup.mjs";
+import { renderSheet } from "./views/sheet.mjs";
 import { renderSignIn, renderSignUp, renderForgot, renderReset, renderJoin, resetJoin } from "./views/auth.mjs";
 
 const IS_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
@@ -144,6 +146,8 @@ function renderProgrammeRoute(rest) {
   if ((r = rest.match(/^participant\/([^/]+)$/))) return renderParticipant(decodeURIComponent(r[1]));
   if (rest === "members") return isStaff() ? renderMembers() : renderGrid();
   if ((r = rest.match(/^print\/([^/]+)$/))) return renderPrint(decodeURIComponent(r[1]));
+  if (rest === "setup") return isStaff() ? renderSetup() : renderGrid();
+  if (rest === "sheet") return isStaff() ? renderSheet() : renderGrid();
   // Later tasks add their routes here, above the grid fallback.
   return renderGrid();
 }
@@ -178,7 +182,14 @@ async function start() {
   document.addEventListener("click", () => {
     ["appMenu", "switcher"].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; });
   });
-  window.addEventListener("hashchange", () => render());
+  window.addEventListener("hashchange", e => {
+    const was = new URL(e.oldURL).hash;
+    if (/\/setup$/.test(was) && was !== location.hash && !leaveSetupOk()) {
+      history.replaceState(null, "", was); // stay on Setup with the draft intact
+      return;
+    }
+    render();
+  });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
   setInterval(refresh, 60000);
   try { state.backend = await makeBackend(); } catch (err) { showFatal(err); return; }

@@ -81,7 +81,7 @@ export function createSupabaseBackend(createClient, url, anonKey, { redirectTo, 
     async allProgrammes() {
       return must(await sb.from("programmes").select("id, name, year, archived, join_code").order("created_at"));
     },
-    async listFrameworks() { return must(await sb.from("frameworks").select("key, name").order("key")); },
+    async listFrameworks() { return must(await sb.from("frameworks").select("key, name, join_delegations").order("key")); },
     async previewProgramme(code) { return must(await sb.rpc("preview_programme", { p_code: code })); },
     async joinProgramme(code, delegation) {
       return must(await sb.rpc("join_programme", { p_code: code, p_delegation: delegation }));
@@ -92,8 +92,8 @@ export function createSupabaseBackend(createClient, url, anonKey, { redirectTo, 
       const fid = programme.framework_id;
       const [fw, goals, indicators, participants, evidence, entries, memberships] = await Promise.all([
         sb.from("frameworks").select("*").eq("id", fid).single().then(must),
-        sb.from("framework_goals").select("code, position, text").eq("framework_id", fid).order("position").then(must),
-        sb.from("framework_indicators").select("code, goal_code, position, text").eq("framework_id", fid).order("position").then(must),
+        sb.from("framework_goals").select("code, position, colour, text").eq("framework_id", fid).order("position").then(must),
+        sb.from("framework_indicators").select("code, goal_code, position, tag, text").eq("framework_id", fid).order("position").then(must),
         selectAll(() => sb.from("participants").select("*").eq("programme_id", pid).order("code")),
         selectAll(() => sb.from("evidence").select("*").eq("programme_id", pid).order("added_at").order("id")),
         selectAll(() => sb.from("entries").select("*").eq("programme_id", pid).is("removed_at", null)
@@ -132,11 +132,13 @@ export function createSupabaseBackend(createClient, url, anonKey, { redirectTo, 
     async removeMember(pid, userId) { must(await sb.rpc("remove_member", { p_programme: pid, p_user: userId })); },
     async regenerateJoinCode(pid) { return must(await sb.rpc("regenerate_join_code", { p_programme: pid })); },
 
-    async createProgramme({ frameworkKey, name, year, theme, roster }) {
+    async createProgramme({ frameworkKey, name, year, theme, roster, endDate }) {
       return must(await sb.rpc("create_programme", { p_framework_key: frameworkKey, p_name: name,
-        p_year: year || "", p_theme: theme || "", p_roster: roster || [] }));
+        p_year: year || "", p_theme: theme || "", p_roster: roster || [], p_end_date: endDate || null }));
     },
     async addParticipants(pid, roster) { return must(await sb.rpc("add_participants", { p_programme: pid, p_roster: roster })); },
+    async saveRoster(pid, changes) { must(await sb.rpc("save_roster", { p_programme: pid, p_changes: changes })); },
+    async setEndDate(pid, date) { must(await sb.rpc("set_end_date", { p_programme: pid, p_date: date || null })); },
     async setArchived(pid, archived) { must(await sb.rpc("set_archived", { p_programme: pid, p_archived: archived })); },
   };
 }
