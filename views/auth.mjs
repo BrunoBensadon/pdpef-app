@@ -3,7 +3,7 @@
 import { state, changeLanguage, render, homeHash } from "../store.mjs";
 import { t, getLang } from "../i18n.mjs";
 import { esc, app, langToggle, LOGO_MARK, errorText, toast } from "../ui.mjs";
-import { normJoinCode } from "../logic.mjs";
+import { normJoinCode, programmeLabel } from "../logic.mjs";
 import { signOut, authBanner, bindAuthBanner } from "../shell.mjs";
 
 function authErrorText(err) {
@@ -119,7 +119,7 @@ export function renderJoin() {
   if (preview && (!state.session || preview.uid !== state.session.userId)) preview = null;
   if (preview) {
     const p = preview;
-    frame(t("join.pickDelegation", { name: p.name + (p.year ? " " + p.year : "") }),
+    frame(t("join.pickDelegation", { name: programmeLabel(p) }),
       '<div class="userlist">' + p.delegations.map(c => '<button data-deleg="' + esc(c) + '">' + esc(c) + "</button>").join("") +
       '</div><p class="formerr" id="err"></p><p><a href="#join" id="joinBack">' + esc(t("common.back")) + "</a></p>");
     document.getElementById("joinBack").onclick = e => { e.preventDefault(); preview = null; render(); };

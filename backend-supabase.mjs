@@ -75,11 +75,11 @@ export function createSupabaseBackend(createClient, url, anonKey, { redirectTo, 
 
     async myMemberships() {
       return must(await sb.from("memberships")
-        .select("role, delegation, joined_at, programme:programmes(id, name, year, archived)")
+        .select("role, delegation, joined_at, programme:programmes(id, name, year, reference, archived)")
         .eq("user_id", await uid()).order("joined_at"));
     },
     async allProgrammes() {
-      return must(await sb.from("programmes").select("id, name, year, archived, join_code").order("created_at"));
+      return must(await sb.from("programmes").select("id, name, year, reference, archived, join_code").order("created_at"));
     },
     async listFrameworks() { return must(await sb.from("frameworks").select("key, name, join_delegations").order("key")); },
     async previewProgramme(code) { return must(await sb.rpc("preview_programme", { p_code: code })); },
@@ -132,9 +132,13 @@ export function createSupabaseBackend(createClient, url, anonKey, { redirectTo, 
     async removeMember(pid, userId) { must(await sb.rpc("remove_member", { p_programme: pid, p_user: userId })); },
     async regenerateJoinCode(pid) { return must(await sb.rpc("regenerate_join_code", { p_programme: pid })); },
 
-    async createProgramme({ frameworkKey, name, year, theme, roster, endDate }) {
+    async createProgramme({ frameworkKey, name, reference, startDate, endDate, roster }) {
       return must(await sb.rpc("create_programme", { p_framework_key: frameworkKey, p_name: name,
-        p_year: year || "", p_theme: theme || "", p_roster: roster || [], p_end_date: endDate || null }));
+        p_reference: reference, p_start_date: startDate || null, p_end_date: endDate || null, p_roster: roster || [] }));
+    },
+    async setProgrammeDetails(pid, { reference, startDate, endDate }) {
+      must(await sb.rpc("set_programme_details", { p_programme: pid, p_reference: reference,
+        p_start_date: startDate || null, p_end_date: endDate || null }));
     },
     async addParticipants(pid, roster) { return must(await sb.rpc("add_participants", { p_programme: pid, p_roster: roster })); },
     async saveRoster(pid, changes) { must(await sb.rpc("save_roster", { p_programme: pid, p_changes: changes })); },

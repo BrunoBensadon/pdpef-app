@@ -262,6 +262,19 @@ export function sheetTsv(rows) {
     .map(c => String(c).replace(/[\t\r\n]+/g, " ")).join("\t")).join("\n");
 }
 
+// The CISV programme reference number, e.g. V-2026-002. null when the value is not valid.
+export function normReference(s) {
+  const v = String(s == null ? "" : s).trim().toUpperCase();
+  return /^[A-Z]+-\d{4}-\d{3}$/.test(v) ? v : null;
+}
+
+// "Ginga Village · V-2026-002"; older programmes without a reference keep "Name year".
+export function programmeLabel(p) {
+  if (p.reference) return p.name + " · " + p.reference;
+  return p.name + (p.year ? " " + p.year : "");
+}
+
 export function xlsxFileName(programme) {
-  return (programme.name + (programme.year ? " " + programme.year : "") + " PDPEF.xlsx").replace(/[\\/:*?"<>|]+/g, "-");
+  return ((programme.reference ? programme.reference + " " : "") + programme.name + " PDPEF.xlsx")
+    .replace(/[\\/:*?"<>|]+/g, "-");
 }

@@ -1,7 +1,7 @@
 "use strict";
 // The official CISV Individual Evaluation Form, one A4 sheet per participant.
 import { state, view, gridOf, evidenceIndex, route, render } from "../store.mjs";
-import { indicatorsByGoal, txt, printedEvidence } from "../logic.mjs";
+import { indicatorsByGoal, txt, printedEvidence, programmeLabel } from "../logic.mjs";
 import { t, getLang, createT } from "../i18n.mjs";
 import { esc, langToggle } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
@@ -13,7 +13,7 @@ export function renderPrint(sel) {
   if (!parts.length) { location.hash = route("grid"); return; }
   const v = view(), g = gridOf(v), evIdx = evidenceIndex(v);
   const groups = indicatorsByGoal(fw);
-  const progLine = esc(d.programme.name) + (d.programme.year ? " " + esc(d.programme.year) : "");
+  const progLine = esc(programmeLabel(d.programme));
   const forms = parts.map(p =>
     '<section class="evalform">' +
       '<header class="formhead"><img src="img/cisv-international.png" alt="CISV International">' +

@@ -1,6 +1,6 @@
 "use strict";
 import { state, route, reloadData } from "../store.mjs";
-import { parseRosterCsv, txt, normGender, isReservedDelegation } from "../logic.mjs";
+import { parseRosterCsv, txt, normGender, isReservedDelegation, normReference, programmeLabel } from "../logic.mjs";
 import { t, getLang } from "../i18n.mjs";
 import { esc, app, toast, errorText, showSkeleton, copyText, LOGO_MARK } from "../ui.mjs";
 import { authBanner, bindAuthBanner } from "../shell.mjs";
@@ -42,17 +42,19 @@ export async function renderAdmin(message, createdCode) {
   const field = (label, id) => "<label>" + esc(label) + '<input type="text" id="' + id + '"></label>';
   app().innerHTML = bar(back) + "<main>" + authBanner() +
     '<div class="card"><h3>' + esc(t("admin.newProgramme")) + '</h3><form id="newProg" class="authform" novalidate>' +
-      field(t("admin.name"), "aName") + field(t("admin.year"), "aYear") + field(t("admin.theme"), "aTheme") +
-      "<label>" + esc(t("admin.finalDay")) + '<input type="date" id="aEnd"></label>' +
+      field(t("admin.name"), "aName") +
+      "<label>" + esc(t("admin.reference")) + '<input type="text" id="aRef" placeholder="V-2026-002" autocapitalize="characters"></label>' +
       "<label>" + esc(t("admin.framework")) + '<select id="aFramework">' + frameworks.map(f =>
         '<option value="' + esc(f.key) + '">' + esc(txt(f.name, lang)) + "</option>").join("") + "</select></label>" +
+      "<label>" + esc(t("admin.startDate")) + '<input type="date" id="aStart"></label>' +
+      "<label>" + esc(t("admin.finalDay")) + '<input type="date" id="aEnd"></label>' +
       "<label>" + esc(t("admin.roster")) + '<textarea id="aRoster"></textarea></label>' +
       '<p class="formerr" id="adminErr"></p><p class="formok" id="adminMsg">' + esc(message || "") + "</p>" +
       (createdCode ? '<p><code class="joincode" id="createdCode">' + esc(createdCode) + '</code> <button type="button" class="btn" id="copyCreated">' +
         esc(t("common.copy")) + "</button></p>" : "") +
       '<button class="btn primary" type="submit">' + esc(t("admin.create")) + "</button></form></div>" +
     "<h3>" + esc(t("admin.all")) + '</h3><div class="adminlist">' + programmes.map(p =>
-      '<div class="card" data-id="' + esc(p.id) + '"><span><b>' + esc(p.name) + "</b> " + esc(p.year) +
+      '<div class="card" data-id="' + esc(p.id) + '"><span><b>' + esc(programmeLabel(p)) + "</b>" +
       " · <code>" + esc(p.join_code) + '</code> <button class="btn acopy">' + esc(t("common.copy")) + "</button>" +
       (p.archived ? ' <span class="muted">(' + esc(t("admin.archived")) + ")</span>" : "") +
       '</span><span><a class="btn aopen" href="#p/' + encodeURIComponent(p.id) + '/grid">' + esc(t("admin.open")) + "</a> " +
@@ -66,6 +68,12 @@ export async function renderAdmin(message, createdCode) {
     e.preventDefault();
     const errEl = document.getElementById("adminErr");
     errEl.textContent = "";
+    const name = document.getElementById("aName").value.trim(), refRaw = document.getElementById("aRef").value;
+    const start = document.getElementById("aStart").value, end = document.getElementById("aEnd").value;
+    if (!name || !refRaw.trim() || !start || !end) { errEl.textContent = t("admin.required"); return; }
+    const reference = normReference(refRaw);
+    if (!reference) { errEl.textContent = t("admin.referenceFormat"); return; }
+    if (start > end) { errEl.textContent = t("admin.datesOrder"); return; }
     const fwKey = document.getElementById("aFramework").value;
     const rows = roster(document.getElementById("aRoster").value, errEl, frameworks.find(f => f.key === fwKey));
     if (!rows) return;
@@ -75,10 +83,7 @@ export async function renderAdmin(message, createdCode) {
     let res;
     try {
       res = await state.backend.createProgramme({
-        frameworkKey: document.getElementById("aFramework").value,
-        name: document.getElementById("aName").value, year: document.getElementById("aYear").value,
-        theme: document.getElementById("aTheme").value,
-        endDate: document.getElementById("aEnd").value || null, roster: rows });
+        frameworkKey: fwKey, name, reference, startDate: start, endDate: end, roster: rows });
     } catch (err) {
       const el = document.getElementById("adminErr");
       if (el) el.textContent = errorText(err);

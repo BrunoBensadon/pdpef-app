@@ -4,13 +4,13 @@ import { state, route, isStaff, changeLanguage, reloadData, render, pendingOps, 
   holdQueue, releaseQueue, resumeQueue } from "./store.mjs";
 import { t, tn, getLang } from "./i18n.mjs";
 import { esc, app, LOGO_MARK, toast, errorText } from "./ui.mjs";
-import { indicatorsOf } from "./logic.mjs";
+import { indicatorsOf, programmeLabel } from "./logic.mjs";
 import { errorKind } from "./queue.mjs";
 
 function progLink(m) {
   const p = m.programme;
   return '<a href="#p/' + encodeURIComponent(p.id) + '/grid" class="' + (p.id === state.programmeId ? "on" : "") +
-    (p.archived ? " past" : "") + '"><span>' + esc(p.name) + (p.year ? " " + esc(p.year) : "") + "</span>" +
+    (p.archived ? " past" : "") + '"><span>' + esc(programmeLabel(p)) + "</span>" +
     '<span class="muted">' + esc(t("role." + m.role)) + "</span></a>";
 }
 
@@ -61,8 +61,7 @@ export function renderShell(active, content) {
   const pending = pendingOps().length;
   app().innerHTML =
     '<header class="bar"><span class="brand">' + LOGO_MARK +
-      '<button class="progbtn" id="progBtn" aria-haspopup="true"><h1>' + esc(p.name) +
-      (p.year ? " " + esc(p.year) : "") + " ▾</h1></button></span>" +
+      '<button class="progbtn" id="progBtn" aria-haspopup="true"><h1>' + esc(p.name) + " ▾</h1></button></span>" +
       '<span class="spacer"></span><span class="who">' + esc(state.profile.display_name) + "</span>" +
       '<button class="menubtn" id="menuBtn" aria-label="' + esc(t("menu.open")) + '">⋮</button>' +
       '<div class="switcher" id="switcher" hidden><h4>' + esc(t("switcher.title")) + "</h4>" +
