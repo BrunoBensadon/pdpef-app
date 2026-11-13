@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
 jobs:
   ping:
+    # This file is the template copied into pdpef-app (docs/DEPLOY.md). Only that repo has the
+    # secrets, so the source repo skips the job instead of failing.
+    if: github.repository == 'BrunoBensadon/pdpef-app'
     runs-on: ubuntu-latest
     steps:
       - name: Call the ping RPC

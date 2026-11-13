@@ -1,10 +1,10 @@
 "use strict";
 // App bar (programme switcher + ⋮ menu), banners, bottom tabs and queue badge.
 import { state, route, isStaff, changeLanguage, reloadData, render, pendingOps, pendingCount,
-  holdQueue, releaseQueue, resumeQueue } from "./store.mjs";
+  holdQueue, releaseQueue, resumeQueue, myDelegation } from "./store.mjs";
 import { t, tn, getLang } from "./i18n.mjs";
 import { esc, app, LOGO_MARK, toast, errorText } from "./ui.mjs";
-import { indicatorsOf, programmeLabel } from "./logic.mjs";
+import { indicatorsOf, programmeLabel, sortParticipants } from "./logic.mjs";
 import { errorKind } from "./queue.mjs";
 
 function progLink(m) {
@@ -50,7 +50,7 @@ export function bindAuthBanner() {
 export function renderShell(active, content) {
   const d = state.data, p = d.programme;
   const firstInd = indicatorsOf(d.framework)[0];
-  const firstPart = d.participants[0];
+  const firstPart = sortParticipants(d.participants, myDelegation())[0]; // the dropdown's first entry
   const tabs = [
     ["grid", "grid", t("nav.overview")],
     ["goal", "goal/" + (firstInd ? encodeURIComponent(firstInd.code) : ""), t("nav.byGoal")],

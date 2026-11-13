@@ -20,13 +20,12 @@ const IS_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const LAST_KEY = "pdpef-last-programme";
 
 async function makeBackend() {
-  const env = localStorage.getItem("pdpef-env");
-  if (IS_LOCAL && env !== "staging") {
+  if (IS_LOCAL) {
     const mock = await import("/local/backend-mock.mjs");
     return mock.createBrowserMockBackend();
   }
   const { createClient } = await import(SUPABASE_JS_URL);
-  const cfg = ENVIRONMENTS[env === "staging" ? "staging" : "production"];
+  const cfg = ENVIRONMENTS.production;
   return createSupabaseBackend(createClient, cfg.url, cfg.anonKey,
     { redirectTo: location.origin + location.pathname });
 }

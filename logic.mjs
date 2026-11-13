@@ -101,6 +101,18 @@ export function delegationsOf(participants) {
   participants.forEach(p => { if (out.indexOf(p.country) < 0) out.push(p.country); });
   return out;
 }
+// Names compare A to Z, ignoring case and accents ("Léa" sits between "Lars" and "Luiza").
+const byText = (a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: "base" });
+// Delegations A to Z; `first` (e.g. the leader's own) leads when participants belong to it.
+export function delegationOrder(participants, first) {
+  const all = delegationsOf(participants).sort(byText);
+  return first && all.indexOf(first) >= 0 ? [first].concat(all.filter(c => c !== first)) : all;
+}
+// Participants by delegation (as delegationOrder), then by name. Returns a new array.
+export function sortParticipants(participants, firstDelegation) {
+  const order = delegationOrder(participants, firstDelegation);
+  return participants.slice().sort((a, b) => order.indexOf(a.country) - order.indexOf(b.country) || byText(a.name, b.name));
+}
 
 export function normJoinCode(s) {
   return String(s == null ? "" : s).replace(/\s+/g, "").toUpperCase();

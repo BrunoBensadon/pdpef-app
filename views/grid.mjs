@@ -1,6 +1,6 @@
 "use strict";
 import { state, view, gridOf, route } from "../store.mjs";
-import { indicatorsOf, findIndicator, txt, goalStyle } from "../logic.mjs";
+import { indicatorsOf, findIndicator, txt, goalStyle, sortParticipants } from "../logic.mjs";
 import { t, getLang } from "../i18n.mjs";
 import { esc } from "../ui.mjs";
 import { renderShell } from "../shell.mjs";
@@ -10,7 +10,8 @@ export function renderGrid() {
   const fw = state.data.framework, inds = indicatorsOf(fw);
   const g = gridOf(view());
   const byCountry = {};
-  state.data.participants.forEach(p => { (byCountry[p.country] = byCountry[p.country] || []).push(p); });
+  // Delegations A to Z, then participants A to Z within each.
+  sortParticipants(state.data.participants).forEach(p => { (byCountry[p.country] = byCountry[p.country] || []).push(p); });
   const head = "<tr><th class='kid'>" + esc(t("grid.participant")) + "</th>" + inds.map(i =>
     '<th class="goalcol" style="' + esc(goalStyle(fw, i.goal_code)) + '"><a href="' + esc(route("goal/" + encodeURIComponent(i.code))) + '" data-goal="' + esc(i.code) + '">' +
     esc(i.code) + "</a></th>").join("") + "</tr>";

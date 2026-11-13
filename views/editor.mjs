@@ -1,7 +1,7 @@
 "use strict";
 import { state, enqueue, author, view, gridOf, evidenceIndex, isStaff, canWrite, participantById, render } from "../store.mjs";
 import { usageCounts, searchEvidence, findExact, normText, canSelfUndo, findIndicator, txt } from "../logic.mjs";
-import { t, getLang } from "../i18n.mjs";
+import { t, tn, getLang } from "../i18n.mjs";
 import { esc, tagChip, toast, openSheet, closeSheet } from "../ui.mjs";
 
 // The server rejects evidence text longer than this.
@@ -98,12 +98,23 @@ export function openMultiAdd(code, participantIds) {
   // Pick ONE evidence statement, then tick which participants it applies to.
   const ind = findIndicator(state.data.framework, code);
   if (!canWrite() || !ind) return;
+  // Participants grouped by delegation, in the order given (the By indicator view's order).
+  const kids = participantIds.map(participantById).filter(Boolean);
+  const groups = [];
+  kids.forEach(k => {
+    let gr = groups.find(x => x.name === k.country);
+    if (!gr) groups.push(gr = { name: k.country, kids: [] });
+    gr.kids.push(k);
+  });
+  const scope = groups.length > 1 ? tn("multi.scopeAll", kids.length)
+    : tn("multi.scopeOne", kids.length, { name: groups.length ? groups[0].name : "" });
   const el = openSheet();
   let chosen = null; // {id: existing evidence id or null, text}
   // Static shell built ONCE (as in openEditor): #q is never recreated, so typing keeps its caret
   // and IME/accent composition; only #results, #newAction and #chosen are redrawn.
   el.innerHTML = '<div class="panel"><h3>' + esc(t("multi.title", { code })) + "</h3>" +
     '<p class="goalhead">' + esc(txt(ind.text, getLang())) + "</p>" +
+    '<p class="muted" id="multiScope">' + esc(scope) + "</p>" +
     '<div id="pick"><input type="search" id="q" placeholder="' + esc(t("editor.search")) +
       '" autocomplete="off" maxlength="' + MAX_EVIDENCE + '"><div class="picker-list" id="results"></div>' +
       '<div id="newAction"></div></div>' +
@@ -134,11 +145,28 @@ export function openMultiAdd(code, participantIds) {
     chosen = c;
     pick.hidden = true;
     chosenEl.hidden = false;
-    chosenEl.innerHTML = "<p><b>" + esc(chosen.text) + "</b></p><div id='kidticks'>" + participantIds.map(id =>
-        '<label class="pill"><input type="checkbox" checked value="' + esc(id) + '"> ' +
-        esc(participantById(id).name) + "</label>").join("") + "</div>" +
+    chosenEl.innerHTML = "<p><b>" + esc(chosen.text) + "</b></p>" +
+      '<div class="tickbar"><span class="muted" id="tickCount"></span>' +
+        '<button type="button" class="btn" id="tickAll">' + esc(t("multi.tickAll")) + "</button>" +
+        '<button type="button" class="btn" id="untickAll">' + esc(t("multi.untickAll")) + "</button></div>" +
+      "<div id='kidticks'>" + groups.map(gr =>
+        (groups.length > 1 ? '<h4 class="tickhead">' + esc(gr.name) + "</h4>" : "") +
+        '<div class="tickrow">' + gr.kids.map(k =>
+          '<label class="pill"><input type="checkbox" checked value="' + esc(k.id) + '"> ' + esc(k.name) + "</label>").join("") +
+        "</div>").join("") + "</div>" +
       '<p><button class="btn primary" id="apply">' + esc(t("multi.apply")) + "</button> " +
       '<button class="btn" id="back">' + esc(t("multi.change")) + "</button></p>";
+    const boxes = () => Array.prototype.slice.call(chosenEl.querySelectorAll("#kidticks input"));
+    const count = () => {
+      const n = boxes().filter(b => b.checked).length;
+      chosenEl.querySelector("#tickCount").textContent = t("multi.ticked", { n, total: kids.length });
+      chosenEl.querySelector("#apply").disabled = n === 0;
+    };
+    const tickAll = on => () => { boxes().forEach(b => { b.checked = on; }); count(); };
+    chosenEl.querySelector("#kidticks").onchange = count;
+    chosenEl.querySelector("#tickAll").onclick = tickAll(true);
+    chosenEl.querySelector("#untickAll").onclick = tickAll(false);
+    count();
     el.querySelector("#back").onclick = () => {
       chosen = null;
       chosenEl.hidden = true; chosenEl.innerHTML = "";
