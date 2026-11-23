@@ -23,7 +23,7 @@ export function renderSheet() {
     '<div class="card"><h3>' + esc(t("sheet.title")) + '</h3><p class="muted">' + esc(t("sheet.help")) + "</p>" + notice +
     '<p><button class="btn primary" id="copyRows">' + esc(t("sheet.copy")) + '</button> <button class="btn" id="downloadXlsx">' +
     esc(t("sheet.download")) + "</button></p></div>" +
-    '<div class="gridwrap"><table class="sheet" id="sheetTable">' + head + body + "</table></div>");
+    '<div class="gridwrap"><table class="sptable" id="sheetTable">' + head + body + "</table></div>");
   document.getElementById("copyRows").onclick = () => copyRows(rows);
   document.getElementById("downloadXlsx").onclick = () => downloadXlsx(rows, inds, d.programme);
 }
